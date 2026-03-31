@@ -60,6 +60,8 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [success, setSuccess] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [editId, setEditId] = useState(null);
+  const [editForm, setEditForm] = useState({});
   const [form, setForm] = useState({
     date: new Date().toLocaleDateString('en-CA'),
     parkingCost: "",
@@ -137,6 +139,34 @@ export default function App() {
     setVisits(updated);
     persist(updated);
     setDeleteId(null);
+  };
+
+  const openEdit = (v) => {
+    setEditId(v.id);
+    setEditForm({
+      date: v.date,
+      parkingCost: v.parkingCost ?? "",
+      duration: v.duration ?? "",
+      activity: v.activity,
+      weight: v.weight ?? "",
+      notes: v.notes ?? ""
+    });
+    setDeleteId(null);
+  };
+
+  const updateVisit = () => {
+    const updated = visits.map(v => v.id === editId ? {
+      ...v,
+      date: editForm.date,
+      parkingCost: parseFloat(editForm.parkingCost) || 0,
+      duration: parseInt(editForm.duration) || 0,
+      activity: editForm.activity,
+      weight: parseFloat(editForm.weight) || null,
+      notes: editForm.notes.trim()
+    } : v).sort((a, b) => b.date.localeCompare(a.date));
+    setVisits(updated);
+    persist(updated);
+    setEditId(null);
   };
 
   const totalParking = visits.reduce((s, v) => s + v.parkingCost, 0);
@@ -366,36 +396,106 @@ export default function App() {
 
       {visits.map(v => (
         <div key={v.id} className="visit-row">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: "#d8ece0", fontSize: 14, fontWeight: 500, marginBottom: 7 }}>{fmtDate(v.date)}</div>
-              <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
-                <span className="badge" style={{ background: ACT_COLOR[v.activity] + "20", color: ACT_COLOR[v.activity], border: `1px solid ${ACT_COLOR[v.activity]}44`, fontSize: 11 }}>
-                  {ACT_ICON[v.activity]} {v.activity}
-                </span>
-                <span style={{ fontSize: 11.5, color: "#6aad8a" }}>{fmtDur(v.duration)}</span>
-                {v.weight && <span style={{ fontSize: 11.5, color: "#7ab8e8" }}>⚖️ {v.weight} lbs</span>}
+          {editId === v.id ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+              <div style={{ fontSize: 12, color: "#3ecfb9", fontWeight: 500, marginBottom: 2 }}>Editing visit</div>
+
+              <div>
+                <div className="lbl">Date</div>
+                <input type="date" className="ifield" value={editForm.date}
+                  onChange={e => setEditForm({ ...editForm, date: e.target.value })}
+                  style={{ colorScheme: "dark" }} />
+              </div>
+
+              <div>
+                <div className="lbl">Activity</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {ACTIVITIES.map(a => (
+                    <button key={a} className="pill-btn" onClick={() => setEditForm({ ...editForm, activity: a })}
+                      style={{ fontSize: 11.5, padding: "6px 10px", ...(editForm.activity === a ? { background: ACT_COLOR[a] + "28", color: ACT_COLOR[a], borderColor: ACT_COLOR[a] + "66" } : {}) }}>
+                      {ACT_ICON[a]} {a}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <div className="lbl">Duration (min)</div>
+                  <input type="number" className="ifield" min="0"
+                    value={editForm.duration} onChange={e => setEditForm({ ...editForm, duration: e.target.value })} />
+                </div>
+                <div>
+                  <div className="lbl">Parking ($)</div>
+                  <input type="number" className="ifield" min="0" step="0.01"
+                    value={editForm.parkingCost} onChange={e => setEditForm({ ...editForm, parkingCost: e.target.value })} />
+                </div>
+              </div>
+
+              <div>
+                <div className="lbl">Weight (lbs)</div>
+                <input type="number" className="ifield" min="0" step="0.1" placeholder="optional"
+                  value={editForm.weight} onChange={e => setEditForm({ ...editForm, weight: e.target.value })} />
+              </div>
+
+              <div>
+                <div className="lbl">Notes</div>
+                <textarea className="ifield" rows={2} placeholder="Notes…"
+                  value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
+                  style={{ resize: "none", lineHeight: 1.55 }} />
+              </div>
+
+              <div style={{ display: "flex", gap: 9 }}>
+                <button onClick={() => setEditId(null)}
+                  style={{ flex: 1, padding: "10px", background: "#152820", color: "#6aad8a", border: "1px solid #1e3d30", borderRadius: 12, fontSize: 13, cursor: "pointer" }}>
+                  Cancel
+                </button>
+                <button onClick={updateVisit}
+                  style={{ flex: 2, padding: "10px", background: "#3ecfb9", color: "#071510", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  Save Changes
+                </button>
               </div>
             </div>
-            <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 10 }}>
-              <div style={{ color: v.parkingCost > 0 ? "#9fd46a" : "#3a6652", fontSize: 13, fontWeight: 600 }}>
-                {v.parkingCost > 0 ? `+$${v.parkingCost.toFixed(2)}` : "Pass"}
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: "#d8ece0", fontSize: 14, fontWeight: 500, marginBottom: 7 }}>{fmtDate(v.date)}</div>
+                  <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
+                    <span className="badge" style={{ background: ACT_COLOR[v.activity] + "20", color: ACT_COLOR[v.activity], border: `1px solid ${ACT_COLOR[v.activity]}44`, fontSize: 11 }}>
+                      {ACT_ICON[v.activity]} {v.activity}
+                    </span>
+                    <span style={{ fontSize: 11.5, color: "#6aad8a" }}>{fmtDur(v.duration)}</span>
+                    {v.weight && <span style={{ fontSize: 11.5, color: "#7ab8e8" }}>⚖️ {v.weight} lbs</span>}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 10 }}>
+                  <div style={{ color: v.parkingCost > 0 ? "#9fd46a" : "#3a6652", fontSize: 13, fontWeight: 600 }}>
+                    {v.parkingCost > 0 ? `+$${v.parkingCost.toFixed(2)}` : "Pass"}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginTop: 7, justifyContent: "flex-end" }}>
+                    <button style={{ background: "#1a3528", border: "1px solid #2a5040", color: "#3ecfb9", borderRadius: 10, padding: "5px 11px", fontSize: 11, cursor: "pointer" }}
+                      onClick={() => openEdit(v)}>
+                      edit
+                    </button>
+                    <button className="del-btn" onClick={() => setDeleteId(deleteId === v.id ? null : v.id)}>
+                      {deleteId === v.id ? "cancel" : "delete"}
+                    </button>
+                  </div>
+                </div>
               </div>
-              <button className="del-btn" style={{ marginTop: 7 }} onClick={() => setDeleteId(deleteId === v.id ? null : v.id)}>
-                {deleteId === v.id ? "cancel" : "delete"}
-              </button>
-            </div>
-          </div>
-          {v.notes && (
-            <div style={{ fontSize: 12.5, color: "#6aad8a", fontStyle: "italic", borderTop: "1px solid #1e3d30", paddingTop: 10, marginTop: 10, lineHeight: 1.55 }}>
-              "{v.notes}"
-            </div>
-          )}
-          {deleteId === v.id && (
-            <div className="confirm-row">
-              <button className="confirm-no" onClick={() => setDeleteId(null)}>Keep</button>
-              <button className="confirm-yes" onClick={() => deleteVisit(v.id)}>Delete</button>
-            </div>
+              {v.notes && (
+                <div style={{ fontSize: 12.5, color: "#6aad8a", fontStyle: "italic", borderTop: "1px solid #1e3d30", paddingTop: 10, marginTop: 10, lineHeight: 1.55 }}>
+                  "{v.notes}"
+                </div>
+              )}
+              {deleteId === v.id && (
+                <div className="confirm-row">
+                  <button className="confirm-no" onClick={() => setDeleteId(null)}>Keep</button>
+                  <button className="confirm-yes" onClick={() => deleteVisit(v.id)}>Delete</button>
+                </div>
+              )}
+            </>
           )}
         </div>
       ))}
