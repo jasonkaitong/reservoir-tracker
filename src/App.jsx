@@ -65,6 +65,7 @@ export default function App() {
     parkingCost: "",
     duration: "",
     activity: "Main Trail",
+    weight: "",
     notes: ""
   });
 
@@ -117,6 +118,7 @@ export default function App() {
       parkingCost: parseFloat(form.parkingCost) || 0,
       duration: parseInt(form.duration) || 0,
       activity: form.activity,
+      weight: parseFloat(form.weight) || null,
       notes: form.notes.trim()
     };
     const updated = [...visits, v].sort((a, b) => b.date.localeCompare(a.date));
@@ -125,7 +127,7 @@ export default function App() {
     setSuccess(true);
     setTimeout(() => {
       setSuccess(false);
-      setForm({ date: new Date().toISOString().split("T")[0], parkingCost: "", duration: "", activity: "Main Trail", notes: "" });
+      setForm({ date: new Date().toLocaleDateString('en-CA'), parkingCost: "", duration: "", activity: "Main Trail", weight: "", notes: "" });
       setTab("home");
     }, 1400);
   };
@@ -154,6 +156,13 @@ export default function App() {
     cum = parseFloat((cum + v.parkingCost).toFixed(2));
     cumData.push({ name: `V${i + 1}`, amount: cum, date: fmtDate(v.date) });
   });
+
+  const weightData = sorted
+    .filter(v => v.weight)
+    .map(v => ({ date: fmtDate(v.date), weight: v.weight }));
+  const latestWeight = weightData.length ? weightData[weightData.length - 1].weight : null;
+  const firstWeight = weightData.length ? weightData[0].weight : null;
+  const weightDelta = latestWeight && firstWeight ? parseFloat((latestWeight - firstWeight).toFixed(1)) : null;
 
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
@@ -322,6 +331,12 @@ export default function App() {
         </div>
 
         <div>
+          <div className="lbl">Weight (lbs) <span style={{ color: "#3a6652", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
+          <input type="number" className="ifield" placeholder="e.g. 178.5" min="0" step="0.1"
+            value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
+        </div>
+
+        <div>
           <div className="lbl">Notes</div>
           <textarea className="ifield" rows={3} placeholder="How was your visit?"
             value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
@@ -359,6 +374,7 @@ export default function App() {
                   {ACT_ICON[v.activity]} {v.activity}
                 </span>
                 <span style={{ fontSize: 11.5, color: "#6aad8a" }}>{fmtDur(v.duration)}</span>
+                {v.weight && <span style={{ fontSize: 11.5, color: "#7ab8e8" }}>⚖️ {v.weight} lbs</span>}
               </div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 10 }}>
@@ -494,10 +510,61 @@ export default function App() {
           })}
         </div>
       </div>
+
+      <div style={{ marginTop: 22 }}>
+        <div className="lbl">Weight over time (lbs)</div>
+        {weightData.length < 2 ? (
+          <div className="card" style={{ textAlign: "center", padding: "28px 16px" }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>⚖️</div>
+            <div style={{ color: "#4f8c6e", fontSize: 13, marginBottom: 4 }}>
+              {weightData.length === 0 ? "No weight data yet" : "Log one more visit with weight to see your trend"}
+            </div>
+            <div style={{ color: "#3a6652", fontSize: 11 }}>Add weight when logging visits</div>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+              {[
+                { val: `${latestWeight} lbs`, lbl: "Current" },
+                { val: `${firstWeight} lbs`, lbl: "Starting" },
+                { val: weightDelta === null ? "—" : `${weightDelta > 0 ? "+" : ""}${weightDelta} lbs`, lbl: "Change", color: weightDelta < 0 ? "#9fd46a" : weightDelta > 0 ? "#d4a853" : "#6aad8a" },
+              ].map(({ val, lbl, color }) => (
+                <div key={lbl} className="card" style={{ textAlign: "center", padding: "12px 8px" }}>
+                  <div style={{ fontFamily: "'Lora', serif", fontSize: 16, color: color || "#7ab8e8", fontWeight: 600, marginBottom: 3 }}>{val}</div>
+                  <div style={{ fontSize: 9.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2 }}>{lbl}</div>
+                </div>
+              ))}
+            </div>
+            <div className="card" style={{ height: 180, paddingLeft: 4, paddingRight: 6 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={weightData} margin={{ top: 12, right: 4, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="wtGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#7ab8e8" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#7ab8e8" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="#1c3529" strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fill: "#4f8c6e", fontSize: 9, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                  <YAxis tick={{ fill: "#4f8c6e", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+                  <Tooltip content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}>
+                        <div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{payload[0].payload.date}</div>
+                        <div style={{ color: "#7ab8e8", fontSize: 14, fontWeight: 600 }}>{payload[0].value} lbs</div>
+                      </div>
+                    );
+                  }} cursor={{ stroke: "#7ab8e8", strokeWidth: 1, strokeDasharray: "3 3" }} />
+                  <Area type="monotone" dataKey="weight" stroke="#7ab8e8" strokeWidth={2.5} fill="url(#wtGrad)" dot={{ r: 3, fill: "#7ab8e8", stroke: "#0c1c17", strokeWidth: 2 }} activeDot={{ r: 5, fill: "#7ab8e8", stroke: "#0c1c17", strokeWidth: 2 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
-
-  const SettingsScreen = () => {
     const expiryDate = settings.passDate ? new Date(settings.passDate + "T12:00:00") : null;
     const expiryStr = expiryDate
       ? new Date(expiryDate.setFullYear(expiryDate.getFullYear() + 1)).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
@@ -610,11 +677,11 @@ export default function App() {
           </div>
 
           <div className="screen">
-            {tab === "home" && HomeScreen()}
-            {tab === "log" && LogScreen()}
-            {tab === "history" && HistoryScreen()}
-            {tab === "stats" && AnalyticsScreen()}
-            {tab === "settings" && SettingsScreen()}
+            {tab === "home" && <HomeScreen />}
+            {tab === "log" && <LogScreen />}
+            {tab === "history" && <HistoryScreen />}
+            {tab === "stats" && <AnalyticsScreen />}
+            {tab === "settings" && <SettingsScreen />}
           </div>
 
           <div className="tabbar">
