@@ -61,7 +61,7 @@ export default function App() {
   const [success, setSuccess] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState({
-    date: new Date().toISOString().split("T")[0],
+    date: new Date().toLocaleDateString('en-CA'),
     parkingCost: "",
     duration: "",
     activity: "Main Trail",
