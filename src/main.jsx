@@ -7,18 +7,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>
 )
-```
-
----
-
-## Updated GitHub instructions
-
-Go back to your GitHub repo. Here's the structure you need to end up with:
-```
-reservoir-tracker/
-├── index.html
-├── package.json
-├── vite.config.js
-└── src/
-    ├── main.jsx
-    └── App.jsx   ← this is your existing .jsx file, renamed
