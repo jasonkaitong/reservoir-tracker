@@ -610,11 +610,11 @@ export default function App() {
           </div>
 
           <div className="screen">
-            {tab === "home" && <HomeScreen />}
-            {tab === "log" && <LogScreen />}
-            {tab === "history" && <HistoryScreen />}
-            {tab === "stats" && <AnalyticsScreen />}
-            {tab === "settings" && <SettingsScreen />}
+            {tab === "home" && HomeScreen()}
+            {tab === "log" && LogScreen()}
+            {tab === "history" && HistoryScreen()}
+            {tab === "stats" && AnalyticsScreen()}
+            {tab === "settings" && SettingsScreen()}
           </div>
 
           <div className="tabbar">
