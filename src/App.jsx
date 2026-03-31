@@ -763,7 +763,7 @@ export default function App() {
   const TAB_LABELS = { home: "Home", log: "Log", history: "History", stats: "Stats", settings: "Settings" };
 
   return (
-   
+   <></>
       <style>{css}</style>
       <div className="phone-wrap">
         <div className="phone">
