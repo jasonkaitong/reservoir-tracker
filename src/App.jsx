@@ -8,18 +8,18 @@ const ACT_COLOR = { "Main Trail": "#3ecfb9", "Rim Trail": "#d4a853", "Fishing": 
 const ACT_ICON  = { "Main Trail": "🥾", "Rim Trail": "⛰️", "Fishing": "🎣", "Picnic": "🧺" };
 
 const SEED = [
-  { id: 1, date: "2026-03-30", parkingCost: 0, duration: 90,  activity: "Main Trail", weight: null, notes: "First visit with annual pass! Beautiful spring morning." },
-  { id: 2, date: "2026-03-15", parkingCost: 6, duration: 75,  activity: "Rim Trail",  weight: null, notes: "Windy but incredible views of the reservoir." },
-  { id: 3, date: "2026-02-28", parkingCost: 6, duration: 45,  activity: "Fishing",    weight: null, notes: "Peaceful morning, no bites." },
-  { id: 4, date: "2026-02-14", parkingCost: 6, duration: 120, activity: "Main Trail", weight: null, notes: "Valentine's Day walk, perfect weather." },
-  { id: 5, date: "2026-01-20", parkingCost: 6, duration: 60,  activity: "Main Trail", weight: null, notes: "New year energy, crisp morning air." },
+  { id: 1, date: "2026-03-30", parkingCost: 0, duration: 90,  activity: "Main Trail", weight: null, distance: 5.0, notes: "First visit with annual pass! Beautiful spring morning." },
+  { id: 2, date: "2026-03-15", parkingCost: 6, duration: 75,  activity: "Rim Trail",  weight: null, distance: 4.7, notes: "Windy but incredible views of the reservoir." },
+  { id: 3, date: "2026-02-28", parkingCost: 6, duration: 45,  activity: "Fishing",    weight: null, distance: 1.2, notes: "Peaceful morning, no bites." },
+  { id: 4, date: "2026-02-14", parkingCost: 6, duration: 120, activity: "Main Trail", weight: null, distance: 5.0, notes: "Valentine's Day walk, perfect weather." },
+  { id: 5, date: "2026-01-20", parkingCost: 6, duration: 60,  activity: "Main Trail", weight: null, distance: 5.0, notes: "New year energy, crisp morning air." },
 ];
 
 const today     = () => new Date().toLocaleDateString("en-CA");
 const fmtDur    = (m) => { const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h}h ${r}m` : `${h}h`) : `${r}m`; };
 const fmtDate   = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const fmtMo     = (s) => { const [y, m] = s.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-US", { month: "short", year: "2-digit" }); };
-const blankForm = () => ({ date: today(), parkingCost: "", duration: "", activity: "Main Trail", weight: "", notes: "" });
+const blankForm = () => ({ date: today(), parkingCost: "", duration: "", activity: "Main Trail", weight: "", distance: "", notes: "" });
 
 const Logo = () => (
   <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
@@ -111,7 +111,7 @@ export default function App() {
   // ── visit actions ─────────────────────────────────────────────
   const addVisit = () => {
     if (!form.date || !form.duration) return;
-    const v = { id: Date.now(), date: form.date, parkingCost: parseFloat(form.parkingCost) || 0, duration: parseInt(form.duration) || 0, activity: form.activity, weight: parseFloat(form.weight) || null, notes: form.notes.trim() };
+    const v = { id: Date.now(), date: form.date, parkingCost: parseFloat(form.parkingCost) || 0, duration: parseInt(form.duration) || 0, activity: form.activity, weight: parseFloat(form.weight) || null, distance: parseFloat(form.distance) || null, notes: form.notes.trim() };
     const updated = [...visits, v].sort((a, b) => b.date.localeCompare(a.date));
     setVisits(updated); saveVisits(updated);
     setLogSuccess(true);
@@ -125,12 +125,12 @@ export default function App() {
 
   const openEdit = (v) => {
     setEditId(v.id);
-    setEditForm({ date: v.date, parkingCost: v.parkingCost ?? "", duration: v.duration ?? "", activity: v.activity, weight: v.weight ?? "", notes: v.notes ?? "" });
+    setEditForm({ date: v.date, parkingCost: v.parkingCost ?? "", duration: v.duration ?? "", activity: v.activity, weight: v.weight ?? "", distance: v.distance ?? "", notes: v.notes ?? "" });
     setDeleteId(null);
   };
 
   const commitEdit = () => {
-    const updated = visits.map(v => v.id !== editId ? v : { ...v, date: editForm.date, parkingCost: parseFloat(editForm.parkingCost) || 0, duration: parseInt(editForm.duration) || 0, activity: editForm.activity, weight: parseFloat(editForm.weight) || null, notes: editForm.notes.trim() })
+    const updated = visits.map(v => v.id !== editId ? v : { ...v, date: editForm.date, parkingCost: parseFloat(editForm.parkingCost) || 0, duration: parseInt(editForm.duration) || 0, activity: editForm.activity, weight: parseFloat(editForm.weight) || null, distance: parseFloat(editForm.distance) || null, notes: editForm.notes.trim() })
       .sort((a, b) => b.date.localeCompare(a.date));
     setVisits(updated); saveVisits(updated); setEditId(null);
   };
@@ -156,6 +156,12 @@ export default function App() {
   const cumData = [{ name: "Start", amount: 0 }];
   let cum = 0;
   sortedAsc.forEach((v, i) => { cum = parseFloat((cum + v.parkingCost).toFixed(2)); cumData.push({ name: `V${i + 1}`, amount: cum, date: fmtDate(v.date) }); });
+
+  const totalMiles   = visits.reduce((s, v) => s + (v.distance || 0), 0);
+
+  const distData = [{ name: "Start", miles: 0 }];
+  let cumMiles = 0;
+  sortedAsc.forEach((v, i) => { cumMiles = parseFloat((cumMiles + (v.distance || 0)).toFixed(2)); distData.push({ name: `V${i + 1}`, miles: cumMiles, date: fmtDate(v.date) }); });
 
   const weightData  = sortedAsc.filter(v => v.weight).map(v => ({ date: fmtDate(v.date), weight: v.weight }));
   const latestW     = weightData.length ? weightData[weightData.length - 1].weight : null;
@@ -186,6 +192,7 @@ export default function App() {
 
   const TipBar    = ({ active, payload, label }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{label}</div><div style={{ color: "#3ecfb9", fontSize: 14, fontWeight: 600 }}>{payload[0].value} visit{payload[0].value !== 1 ? "s" : ""}</div></div>;
   const TipArea   = ({ active, payload }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{payload[0].payload.date}</div><div style={{ color: "#3ecfb9", fontSize: 14, fontWeight: 600 }}>${payload[0].value.toFixed(2)} saved</div></div>;
+  const TipDist   = ({ active, payload }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{payload[0].payload.date}</div><div style={{ color: "#9fd46a", fontSize: 14, fontWeight: 600 }}>{payload[0].value.toFixed(1)} mi total</div></div>;
   const TipWeight = ({ active, payload }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{payload[0].payload.date}</div><div style={{ color: "#7ab8e8", fontSize: 14, fontWeight: 600 }}>{payload[0].value} lbs</div></div>;
 
   // ─────────────────────────────────────────────────────────────
@@ -201,8 +208,8 @@ export default function App() {
         <div style={{ fontSize: 11, color: "#3a6652", marginTop: 6 }}>Annual Pass · Purchased {fmtDate(settings.passDate)}</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, padding: "0 18px", marginBottom: 14 }}>
-        {[{ val: visits.length, lbl: "Visits" }, { val: fmtDur(totalMins), lbl: "Time" }, { val: `$${totalParking.toFixed(0)}`, lbl: "Saved" }].map(({ val, lbl }) => (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 18px", marginBottom: 14 }}>
+        {[{ val: visits.length, lbl: "Visits" }, { val: fmtDur(totalMins), lbl: "Time" }, { val: `$${totalParking.toFixed(0)}`, lbl: "Saved" }, { val: `${totalMiles.toFixed(1)} mi`, lbl: "Miles" }].map(({ val, lbl }) => (
           <div key={lbl} className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
             <div style={{ fontFamily: "'Lora', serif", fontSize: 22, color: "#3ecfb9", fontWeight: 600, marginBottom: 3 }}>{val}</div>
             <div style={{ fontSize: 9.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2 }}>{lbl}</div>
@@ -288,9 +295,15 @@ export default function App() {
             <input type="number" className="ifield" placeholder="e.g. 6.00" min="0" step="0.01" value={form.parkingCost} onChange={e => setForm({ ...form, parkingCost: e.target.value })} />
           </div>
         </div>
-        <div>
-          <div className="lbl">Weight (lbs) <span style={{ color: "#3a6652", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
-          <input type="number" className="ifield" placeholder="e.g. 178.5" min="0" step="0.1" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+          <div>
+            <div className="lbl">Distance (miles) <span style={{ color: "#3a6652", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
+            <input type="number" className="ifield" placeholder="e.g. 5.0" min="0" step="0.1" value={form.distance} onChange={e => setForm({ ...form, distance: e.target.value })} />
+          </div>
+          <div>
+            <div className="lbl">Weight (lbs) <span style={{ color: "#3a6652", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
+            <input type="number" className="ifield" placeholder="e.g. 178.5" min="0" step="0.1" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
+          </div>
         </div>
         <div>
           <div className="lbl">Notes</div>
@@ -330,9 +343,15 @@ export default function App() {
                   <input type="number" className="ifield" min="0" step="0.01" value={editForm.parkingCost} onChange={e => setEditForm({ ...editForm, parkingCost: e.target.value })} />
                 </div>
               </div>
-              <div>
-                <div className="lbl">Weight (lbs) <span style={{ color: "#3a6652", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
-                <input type="number" className="ifield" min="0" step="0.1" placeholder="optional" value={editForm.weight} onChange={e => setEditForm({ ...editForm, weight: e.target.value })} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <div className="lbl">Distance (mi)</div>
+                  <input type="number" className="ifield" min="0" step="0.1" placeholder="optional" value={editForm.distance} onChange={e => setEditForm({ ...editForm, distance: e.target.value })} />
+                </div>
+                <div>
+                  <div className="lbl">Weight (lbs)</div>
+                  <input type="number" className="ifield" min="0" step="0.1" placeholder="optional" value={editForm.weight} onChange={e => setEditForm({ ...editForm, weight: e.target.value })} />
+                </div>
               </div>
               <div>
                 <div className="lbl">Notes</div>
@@ -353,6 +372,7 @@ export default function App() {
                       {ACT_ICON[v.activity]} {v.activity}
                     </span>
                     <span style={{ fontSize: 11.5, color: "#6aad8a" }}>{fmtDur(v.duration)}</span>
+                    {v.distance && <span style={{ fontSize: 11.5, color: "#9fd46a" }}>📍 {v.distance} mi</span>}
                     {v.weight && <span style={{ fontSize: 11.5, color: "#7ab8e8" }}>⚖️ {v.weight} lbs</span>}
                   </div>
                 </div>
@@ -458,8 +478,42 @@ export default function App() {
         </div>
       </div>
 
+      <div style={{ marginBottom: 22 }}>
+        <div className="lbl">Cumulative distance (miles)</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+          {[
+            { val: `${totalMiles.toFixed(1)} mi`, lbl: "Total" },
+            { val: visits.filter(v => v.distance).length > 0 ? `${(totalMiles / visits.filter(v => v.distance).length).toFixed(1)} mi` : "—", lbl: "Avg/Visit" },
+            { val: visits.filter(v => v.distance).length > 0 ? `${Math.max(...visits.filter(v => v.distance).map(v => v.distance)).toFixed(1)} mi` : "—", lbl: "Longest" },
+          ].map(({ val, lbl }) => (
+            <div key={lbl} className="card" style={{ textAlign: "center", padding: "12px 8px" }}>
+              <div style={{ fontFamily: "'Lora', serif", fontSize: 16, color: "#9fd46a", fontWeight: 600, marginBottom: 3 }}>{val}</div>
+              <div style={{ fontSize: 9.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2 }}>{lbl}</div>
+            </div>
+          ))}
+        </div>
+        <div className="card" style={{ height: 180, paddingLeft: 4, paddingRight: 6 }}>
+          {distData.length <= 1
+            ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#3a6652", fontSize: 12 }}>No distance data yet</div>
+            : <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={distData} margin={{ top: 12, right: 4, left: -22, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="distGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#9fd46a" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#9fd46a" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="#1c3529" strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fill: "#4f8c6e", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "#4f8c6e", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<TipDist />} cursor={{ stroke: "#9fd46a", strokeWidth: 1, strokeDasharray: "3 3" }} />
+                  <Area type="monotone" dataKey="miles" stroke="#9fd46a" strokeWidth={2.5} fill="url(#distGrad)" dot={false} activeDot={{ r: 4, fill: "#9fd46a", stroke: "#0c1c17", strokeWidth: 2 }} />
+                </AreaChart>
+              </ResponsiveContainer>}
+        </div>
+      </div>
+
       <div>
-        <div className="lbl">Weight over time (lbs)</div>
         {weightData.length < 2 ? (
           <div className="card" style={{ textAlign: "center", padding: "28px 16px" }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>⚖️</div>
