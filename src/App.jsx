@@ -315,9 +315,37 @@ export default function App() {
     </div>
   );
 
+  const exportCSV = () => {
+    const header = ["Date", "Activity", "Duration (min)", "Parking Saved ($)", "Distance (mi)", "Weight (lbs)", "Notes"];
+    const rows = [...visits].sort((a, b) => a.date.localeCompare(b.date)).map(v => [
+      v.date,
+      v.activity,
+      v.duration ?? "",
+      v.parkingCost ?? "",
+      v.distance ?? "",
+      v.weight ?? "",
+      `"${(v.notes || "").replace(/"/g, '""')}"`,
+    ]);
+    const csv = [header, ...rows].map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `lafayette-reservoir-visits.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const HistoryScreen = () => (
     <div style={{ padding: "18px 18px 32px" }}>
-      <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#d8ece0", fontWeight: 400, marginBottom: 3 }}>Visit Log</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 3 }}>
+        <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#d8ece0", fontWeight: 400 }}>Visit Log</div>
+        {visits.length > 0 && (
+          <button onClick={exportCSV} style={{ background: "#1a3528", border: "1px solid #2a5040", color: "#3ecfb9", borderRadius: 12, padding: "8px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
+            ↓ CSV
+          </button>
+        )}
+      </div>
       <div style={{ fontSize: 12.5, color: "#4f8c6e", marginBottom: 20 }}>{visits.length} visit{visits.length !== 1 ? "s" : ""} · {fmtDur(totalMins)} total</div>
       {visits.length === 0 && <div style={{ textAlign: "center", color: "#3a6652", padding: "48px 0", fontSize: 13 }}>No visits yet</div>}
       {visits.map(v => (
