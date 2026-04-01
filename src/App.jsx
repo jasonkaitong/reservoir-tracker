@@ -18,7 +18,7 @@ const SEED = [
 const today     = () => new Date().toLocaleDateString("en-CA");
 const fmtDur    = (m) => { const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h}h ${r}m` : `${h}h`) : `${r}m`; };
 const fmtDate   = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-const fmtMo     = (s) => { const [y, m] = s.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-US", { month: "short", year: "2-digit" }); };
+const fmtMo = (s) => { const [y, m] = s.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-US", { month: "short", year: "numeric" }); };
 const blankForm = () => ({ date: today(), parkingCost: "", duration: "", activity: "Main Trail", weight: "", distance: "", notes: "" });
 
 const Logo = () => (
