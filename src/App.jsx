@@ -18,7 +18,7 @@ const SEED = [
 const today     = () => new Date().toLocaleDateString("en-CA");
 const fmtDur    = (m) => { const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h}h ${r}m` : `${h}h`) : `${r}m`; };
 const fmtDate   = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-const fmtMo = (s) => { const [y, m] = s.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-US", { month: "short", year: "numeric" }); };
+const fmtMo     = (s) => { const [y, m] = s.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-US", { month: "short", year: "2-digit" }); };
 const blankForm = () => ({ date: today(), parkingCost: "", duration: "", activity: "Main Trail", weight: "", distance: "", notes: "" });
 
 const Logo = () => (
@@ -646,14 +646,163 @@ export default function App() {
   };
 
   // ─────────────────────────────────────────────────────────────
+  const HOURS = [
+    { month: "January",   hours: "6:30 am – 5:30 pm" },
+    { month: "February",  hours: "6:30 am – 6:00 pm" },
+    { month: "March",     hours: "6:30 am – 7:30 pm" },
+    { month: "April",     hours: "6:00 am – 8:00 pm" },
+    { month: "May",       hours: "6:00 am – 8:30 pm" },
+    { month: "June",      hours: "6:00 am – 9:00 pm" },
+    { month: "July",      hours: "6:00 am – 9:00 pm" },
+    { month: "August",    hours: "6:00 am – 8:30 pm" },
+    { month: "September", hours: "6:30 am – 8:00 pm" },
+    { month: "October",   hours: "6:30 am – 7:00 pm" },
+    { month: "November",  hours: "6:30 am – 5:30 pm" },
+    { month: "December",  hours: "6:30 am – 5:30 pm" },
+  ];
+
+  const currentMonthHours = HOURS[new Date().getMonth()].hours;
+
+  const InfoScreen = () => (
+    <div style={{ padding: "18px 18px 36px" }}>
+      <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#d8ece0", fontWeight: 400, marginBottom: 3 }}>Park Info</div>
+      <div style={{ fontSize: 12.5, color: "#4f8c6e", marginBottom: 18 }}>Lafayette Reservoir Recreation Area</div>
+
+      {/* Map */}
+      <div style={{ marginBottom: 18 }}>
+        <div className="lbl">Map</div>
+        <div style={{ borderRadius: 18, overflow: "hidden", border: "1px solid #1e3d30", height: 220 }}>
+          <iframe
+            title="Lafayette Reservoir Map"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3151.2!2d-122.1341!3d37.8877!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80857e5b0de1f015%3A0x2f8e1e6d1e2d1234!2sLafayette%20Reservoir%20Recreation%20Area!5e0!3m2!1sen!2sus!4v1680000000000!5m2!1sen!2sus"
+            width="100%"
+            height="220"
+            style={{ border: 0, display: "block" }}
+            allowFullScreen=""
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </div>
+      </div>
+
+      {/* Contact */}
+      <div style={{ marginBottom: 18 }}>
+        <div className="lbl">Contact</div>
+        <div className="card" style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {[
+            { icon: "📍", label: "Address", val: "3849 Mt. Diablo Blvd, Lafayette, CA 94549" },
+            { icon: "📞", label: "Phone",   val: "(925) 284-9669" },
+          ].map(({ icon, label, val }) => (
+            <div key={label} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 0", borderBottom: "1px solid #1c3529" }}>
+              <span style={{ fontSize: 15, lineHeight: 1.4 }}>{icon}</span>
+              <div>
+                <div style={{ fontSize: 10.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 2 }}>{label}</div>
+                <div style={{ fontSize: 13, color: "#c8ddd0" }}>{val}</div>
+              </div>
+            </div>
+          ))}
+          <div style={{ padding: "10px 0" }}>
+            <div style={{ fontSize: 10.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 6 }}>🌐 Website</div>
+            <a href="https://www.ebmud.com/recreation/east-bay/lafayette-reservoir" target="_blank" rel="noreferrer"
+              style={{ fontSize: 12.5, color: "#3ecfb9", wordBreak: "break-all", textDecoration: "none" }}>
+              ebmud.com/recreation/east-bay/lafayette-reservoir
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Today's hours highlight */}
+      <div style={{ marginBottom: 18 }}>
+        <div className="lbl">Today's Hours</div>
+        <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 13, color: "#4f8c6e", marginBottom: 3 }}>{HOURS[new Date().getMonth()].month}</div>
+            <div style={{ fontFamily: "'Lora', serif", fontSize: 20, color: "#3ecfb9" }}>{currentMonthHours}</div>
+          </div>
+          <div style={{ fontSize: 28 }}>🕐</div>
+        </div>
+      </div>
+
+      {/* Monthly hours */}
+      <div style={{ marginBottom: 18 }}>
+        <div className="lbl">Hours by Month</div>
+        <div className="card" style={{ padding: "6px 18px" }}>
+          {HOURS.map(({ month, hours }, i) => {
+            const isCurrent = i === new Date().getMonth();
+            return (
+              <div key={month} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: i < 11 ? "1px solid #1c3529" : "none", background: isCurrent ? "transparent" : "transparent" }}>
+                <span style={{ fontSize: 13, color: isCurrent ? "#3ecfb9" : "#6aad8a", fontWeight: isCurrent ? 600 : 400 }}>{month}{isCurrent ? " ←" : ""}</span>
+                <span style={{ fontSize: 12.5, color: isCurrent ? "#d8ece0" : "#4f8c6e", fontWeight: isCurrent ? 500 : 400 }}>{hours}</span>
+              </div>
+            );
+          })}
+          <div style={{ fontSize: 10, color: "#3a6652", paddingTop: 8, lineHeight: 1.5 }}>
+            Visitor Center: Sep–Mar 6:30 am–4:00 pm · Apr–Aug 6:30 am–5:00 pm
+          </div>
+        </div>
+      </div>
+
+      {/* Trails */}
+      <div style={{ marginBottom: 18 }}>
+        <div className="lbl">Trails</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            { name: "Lakeside Nature Trail", dist: "2.79 mi", type: "Paved loop", diff: "Easy", icon: "🚶", color: "#3ecfb9", desc: "Circles the reservoir. Open to bicyclists during limited hours. Dogs allowed." },
+            { name: "Rim Trail",             dist: "4.97 mi", type: "Unpaved fire road", diff: "Moderate", icon: "⛰️", color: "#d4a853", desc: "Traverses ridgetops through brushland and oak forests overlooking the reservoir." },
+          ].map(t => (
+            <div key={t.name} className="card" style={{ borderLeft: `3px solid ${t.color}`, borderRadius: "0 18px 18px 0", paddingLeft: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                <div>
+                  <div style={{ fontSize: 14, color: "#d8ece0", fontWeight: 500, marginBottom: 3 }}>{t.icon} {t.name}</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <span style={{ fontSize: 11, background: t.color + "22", color: t.color, border: `1px solid ${t.color}44`, borderRadius: 20, padding: "2px 8px" }}>{t.dist}</span>
+                    <span style={{ fontSize: 11, background: "#1e3d30", color: "#6aad8a", borderRadius: 20, padding: "2px 8px" }}>{t.diff}</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: "#4f8c6e", lineHeight: 1.55 }}>{t.desc}</div>
+              <div style={{ fontSize: 11, color: "#3a6652", marginTop: 6 }}>{t.type}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Rules */}
+      <div>
+        <div className="lbl">Key Rules</div>
+        <div className="card">
+          {[
+            { icon: "🐕", rule: "Dogs must be leashed at all times (6 ft max). No pets in water." },
+            { icon: "🚲", rule: "Bikes on Lakeside Trail only — Sun until noon, Tue & Thu afternoons." },
+            { icon: "🎣", rule: "EBMUD daily fishing permit required. Purchase at Visitor Center." },
+            { icon: "🏊", rule: "No swimming or wading in the reservoir." },
+            { icon: "🔥", rule: "BBQ in designated areas only, charcoal only." },
+            { icon: "🍄", rule: "Do not eat or collect mushrooms — toxic species present." },
+          ].map(({ icon, rule }) => (
+            <div key={rule} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "9px 0", borderBottom: "1px solid #1c3529" }}>
+              <span style={{ fontSize: 15, lineHeight: 1.5, flexShrink: 0 }}>{icon}</span>
+              <span style={{ fontSize: 12.5, color: "#6aad8a", lineHeight: 1.55 }}>{rule}</span>
+            </div>
+          ))}
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", paddingTop: 9 }}>
+            <span style={{ fontSize: 15, lineHeight: 1.5, flexShrink: 0 }}>🦁</span>
+            <span style={{ fontSize: 12.5, color: "#6aad8a", lineHeight: 1.55 }}>Mountain lion habitat. Hike in groups, make noise at dusk and dawn.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ─────────────────────────────────────────────────────────────
   const TABS = [
     { id: "home",     icon: "🏞️" },
     { id: "log",      icon: "✏️" },
     { id: "history",  icon: "📋" },
     { id: "stats",    icon: "📊" },
+    { id: "info",     icon: "ℹ️"  },
     { id: "settings", icon: "⚙️" },
   ];
-  const TAB_LABELS = { home: "Home", log: "Log", history: "History", stats: "Stats", settings: "Settings" };
+  const TAB_LABELS = { home: "Home", log: "Log", history: "History", stats: "Stats", info: "Info", settings: "Settings" };
 
   return (
     <>
@@ -673,6 +822,7 @@ export default function App() {
             {tab === "log"      && LogScreen()}
             {tab === "history"  && HistoryScreen()}
             {tab === "stats"    && StatsScreen()}
+            {tab === "info"     && InfoScreen()}
             {tab === "settings" && SettingsScreen()}
           </div>
           <div className="tabbar">
