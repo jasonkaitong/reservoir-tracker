@@ -268,6 +268,10 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <div style={{ textAlign: "center", paddingTop: 8, paddingBottom: 4 }}>
+        <span style={{ fontSize: 10, color: "#243d30", letterSpacing: 1 }}>v0.5</span>
+      </div>
     </div>
   );
 
@@ -318,35 +322,63 @@ export default function App() {
   const exportCSV = () => {
     const header = ["Date", "Activity", "Duration (min)", "Parking Saved ($)", "Distance (mi)", "Weight (lbs)", "Notes"];
     const rows = [...visits].sort((a, b) => a.date.localeCompare(b.date)).map(v => [
-      v.date,
-      v.activity,
-      v.duration ?? "",
-      v.parkingCost ?? "",
-      v.distance ?? "",
-      v.weight ?? "",
+      v.date, v.activity, v.duration ?? "", v.parkingCost ?? "", v.distance ?? "", v.weight ?? "",
       `"${(v.notes || "").replace(/"/g, '""')}"`,
     ]);
     const csv = [header, ...rows].map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = `lafayette-reservoir-visits.csv`;
-    a.click();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "lafayette-visits.csv"; a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const exportJSON = () => {
+    const payload = { version: "0.5", exported: new Date().toISOString(), visits };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "lafayette-backup.json"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importJSON = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        const incoming = parsed.visits ?? parsed;
+        if (!Array.isArray(incoming)) { alert("Invalid backup file."); return; }
+        if (!window.confirm(`Import ${incoming.length} visits? This will replace your current data.`)) return;
+        const updated = incoming.sort((a, b) => b.date.localeCompare(a.date));
+        setVisits(updated); saveVisits(updated);
+      } catch { alert("Could not read file. Make sure it's a valid JSON backup."); }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
   const HistoryScreen = () => (
     <div style={{ padding: "18px 18px 32px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 3 }}>
         <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#d8ece0", fontWeight: 400 }}>Visit Log</div>
-        {visits.length > 0 && (
-          <button onClick={exportCSV} style={{ background: "#1a3528", border: "1px solid #2a5040", color: "#3ecfb9", borderRadius: 12, padding: "8px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
-            ↓ CSV
-          </button>
-        )}
       </div>
-      <div style={{ fontSize: 12.5, color: "#4f8c6e", marginBottom: 20 }}>{visits.length} visit{visits.length !== 1 ? "s" : ""} · {fmtDur(totalMins)} total</div>
+      <div style={{ fontSize: 12.5, color: "#4f8c6e", marginBottom: 12 }}>{visits.length} visit{visits.length !== 1 ? "s" : ""} · {fmtDur(totalMins)} total</div>
+
+      {/* export / import toolbar */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+        <button onClick={exportJSON} style={{ flex: 1, background: "#3ecfb9", color: "#071510", border: "none", borderRadius: 12, padding: "10px 6px", fontSize: 12, fontWeight: 600, cursor: "pointer", lineHeight: 1.3, textAlign: "center" }}>
+          ↓ Backup<br/><span style={{ fontSize: 10, fontWeight: 400 }}>JSON</span>
+        </button>
+        <label style={{ flex: 1, background: "#1a3528", border: "1px solid #2a5040", color: "#3ecfb9", borderRadius: 12, padding: "10px 6px", fontSize: 12, fontWeight: 500, cursor: "pointer", lineHeight: 1.3, textAlign: "center", display: "block" }}>
+          ↑ Restore<br/><span style={{ fontSize: 10, fontWeight: 400 }}>JSON</span>
+          <input type="file" accept=".json" onChange={importJSON} style={{ display: "none" }} />
+        </label>
+        <button onClick={exportCSV} disabled={visits.length === 0} style={{ flex: 1, background: "#152820", border: "1px solid #1e3d30", color: "#6aad8a", borderRadius: 12, padding: "10px 6px", fontSize: 12, fontWeight: 500, cursor: visits.length === 0 ? "default" : "pointer", opacity: visits.length === 0 ? 0.4 : 1, lineHeight: 1.3, textAlign: "center" }}>
+          ↓ Export<br/><span style={{ fontSize: 10, fontWeight: 400 }}>CSV</span>
+        </button>
+      </div>
+
       {visits.length === 0 && <div style={{ textAlign: "center", color: "#3a6652", padding: "48px 0", fontSize: 13 }}>No visits yet</div>}
       {visits.map(v => (
         <div key={v.id} className="visit-row">
