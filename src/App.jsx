@@ -81,6 +81,11 @@ const CSS = `
 
 export default function App() {
   const [tab,           setTab]           = useState("home");
+  const [activeUser,    setActiveUser]    = useState(null);   // { id, name, avatar }
+  const [users,         setUsers]         = useState([]);
+  const [showUserPicker,setShowUserPicker]= useState(false);
+  const [newUserName,   setNewUserName]   = useState("");
+  const [newUserAvatar, setNewUserAvatar] = useState("🏃");
   const [visits,        setVisits]        = useState([]);
   const [settings,      setSettings]      = useState({ passCost: DEFAULT_PASS_COST, passDate: DEFAULT_PASS_DATE });
   const [settingsForm,  setSettingsForm]  = useState({ passCost: DEFAULT_PASS_COST, passDate: DEFAULT_PASS_DATE });
@@ -92,19 +97,147 @@ export default function App() {
   const [editForm,      setEditForm]      = useState({});
   const [ready,         setReady]         = useState(false);
 
-  // ── persistence ──────────────────────────────────────────────
+  const AVATARS = ["🏃","🚶","🧗","🎣","🐕","⛰️","🌿","🌊","🦅","🧘","🚴","🌲"];
+
+  // reads a File into a square base64 jpeg (max 120px) to keep storage small
+  const resizeToBase64 = (file) => new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const SIZE = 120;
+      const canvas = document.createElement("canvas");
+      canvas.width = SIZE; canvas.height = SIZE;
+      const ctx = canvas.getContext("2d");
+      const min = Math.min(img.width, img.height);
+      const sx = (img.width  - min) / 2;
+      const sy = (img.height - min) / 2;
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, SIZE, SIZE);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.8));
+    };
+    img.src = url;
+  });
+
+  // renders either an emoji or a circular photo
+  const AvatarCircle = ({ avatar, size = 34, border = false, active = false }) => {
+    const isImg = avatar?.startsWith("data:");
+    return (
+      <div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
+        background: active ? "#1a3528" : "#0c1c17",
+        border: `${border ? 2 : 1}px solid ${active ? "#3ecfb9" : "#1e3d30"}`,
+        display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.45 }}>
+        {isImg
+          ? <img src={avatar} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : avatar}
+      </div>
+    );
+  };
+
+  // emoji grid + upload button used in both onboard and settings
+  const AvatarPicker = ({ value, onChange }) => {
+    const handleFile = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const b64 = await resizeToBase64(file);
+      onChange(b64);
+      e.target.value = "";
+    };
+    const isCustom = value?.startsWith("data:");
+    return (
+      <div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 9, justifyContent: "center", marginBottom: 10 }}>
+          {AVATARS.map(a => (
+            <button key={a} onClick={() => onChange(a)}
+              style={{ width: 42, height: 42, borderRadius: "50%", background: value === a ? "#1a3528" : "#0c1c17",
+                border: `2px solid ${value === a ? "#3ecfb9" : "#1e3d30"}`, fontSize: 20, cursor: "pointer" }}>
+              {a}
+            </button>
+          ))}
+        </div>
+        <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+          background: isCustom ? "#1a3528" : "#152820", border: `1px solid ${isCustom ? "#3ecfb9" : "#1e3d30"}`,
+          borderRadius: 14, padding: "11px 16px", cursor: "pointer" }}>
+          {isCustom
+            ? <><AvatarCircle avatar={value} size={32} active /><span style={{ fontSize: 13, color: "#3ecfb9" }}>Custom photo selected ✓</span></>
+            : <><span style={{ fontSize: 18 }}>📷</span><span style={{ fontSize: 13, color: "#6aad8a" }}>Upload a photo from your device</span></>}
+          <input type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+        </label>
+      </div>
+    );
+  };
+
+  // ── storage helpers (namespaced per user) ─────────────────────
+  const vKey = (uid) => `lr_visits_v2_${uid}`;
+  const sKey = (uid) => `lr_settings_v1_${uid}`;
+  const lsGet = (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  const saveVisits   = (v, uid) => lsSet(vKey(uid || activeUser?.id), v);
+  const saveSettings = (s, uid) => lsSet(sKey(uid || activeUser?.id), s);
+
+  const loadUserData = (uid) => {
+    const v = lsGet(vKey(uid));
+    setVisits(v ?? SEED);
+    const s = lsGet(sKey(uid));
+    if (s) { setSettings(s); setSettingsForm(s); }
+    else   { setSettings({ passCost: DEFAULT_PASS_COST, passDate: DEFAULT_PASS_DATE }); setSettingsForm({ passCost: DEFAULT_PASS_COST, passDate: DEFAULT_PASS_DATE }); }
+  };
+
+  // ── bootstrap ─────────────────────────────────────────────────
   useEffect(() => {
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = "https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap";
     document.head.appendChild(link);
-    try { const r = localStorage.getItem("lr_visits_v2");   if (r) setVisits(JSON.parse(r)); else setVisits(SEED); } catch { setVisits(SEED); }
-    try { const s = localStorage.getItem("lr_settings_v1"); if (s) { const p = JSON.parse(s); setSettings(p); setSettingsForm(p); } } catch {}
+
+    const allUsers = lsGet("lr_users") || [];
+    const lastId   = lsGet("lr_active_user");
+    setUsers(allUsers);
+
+    if (allUsers.length > 0) {
+      const found = allUsers.find(u => u.id === lastId) || allUsers[0];
+      setActiveUser(found);
+      loadUserData(found.id);
+    }
     setReady(true);
   }, []);
 
-  const saveVisits   = (v) => { try { localStorage.setItem("lr_visits_v2",   JSON.stringify(v)); } catch {} };
-  const saveSettings = (s) => { try { localStorage.setItem("lr_settings_v1", JSON.stringify(s)); } catch {} };
+  const switchUser = (user) => {
+    setActiveUser(user);
+    lsSet("lr_active_user", user.id);
+    loadUserData(user.id);
+    setTab("home");
+    setShowUserPicker(false);
+    setEditId(null);
+    setDeleteId(null);
+  };
+
+  const createUser = () => {
+    const name = newUserName.trim();
+    if (!name) return;
+    const id = `user_${Date.now()}`;
+    const user = { id, name, avatar: newUserAvatar, created: today() };
+    const updated = [...users, user];
+    setUsers(updated);
+    lsSet("lr_users", updated);
+    setNewUserName("");
+    setNewUserAvatar("🏃");
+    switchUser(user);
+  };
+
+  const deleteUser = (uid) => {
+    if (!window.confirm("Delete this user and all their data? This cannot be undone.")) return;
+    localStorage.removeItem(vKey(uid));
+    localStorage.removeItem(sKey(uid));
+    const updated = users.filter(u => u.id !== uid);
+    setUsers(updated);
+    lsSet("lr_users", updated);
+    if (activeUser?.id === uid) {
+      if (updated.length > 0) switchUser(updated[0]);
+      else { setActiveUser(null); lsSet("lr_active_user", null); setVisits([]); }
+    }
+    setShowUserPicker(false);
+  };
 
   // ── visit actions ─────────────────────────────────────────────
   const addVisit = () => {
@@ -216,9 +349,16 @@ export default function App() {
 
   const HomeScreen = () => (
     <div style={{ paddingBottom: 24 }}>
-      <div style={{ padding: "12px 18px 22px", textAlign: "center" }}>
+      <div style={{ padding: "12px 18px 22px", textAlign: "center", position: "relative" }}>
+        {users.length > 1 && (
+          <button onClick={() => setShowUserPicker(true)}
+            style={{ position: "absolute", top: 12, right: 18, background: "#152820", border: "1px solid #1e3d30", color: "#6aad8a", borderRadius: 20, padding: "5px 10px 5px 5px", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}>
+            <AvatarCircle avatar={activeUser?.avatar} size={24} />
+            <span>{activeUser?.name}</span>
+          </button>
+        )}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}><Logo /></div>
-        <div style={{ fontSize: 11, color: "#4f8c6e", letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 500, marginBottom: 5 }}>Welcome back, JT</div>
+        <div style={{ fontSize: 11, color: "#4f8c6e", letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 500, marginBottom: 5 }}>Welcome back, {activeUser?.name || "friend"}</div>
         <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#d8ece0", fontWeight: 400, lineHeight: 1.25 }}>Lafayette<br />Reservoir</div>
         <div style={{ fontSize: 11, color: "#3a6652", marginTop: 6 }}>Annual Pass · Purchased {fmtDate(settings.passDate)}</div>
       </div>
@@ -714,9 +854,48 @@ export default function App() {
           </div>
         </div>
         <div style={{ marginTop: 20 }}>
+          <div className="lbl">Users</div>
+          <div className="card" style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {users.map((u, i) => (
+              <div key={u.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", borderBottom: i < users.length - 1 ? "1px solid #1c3529" : "none" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <AvatarCircle avatar={u.avatar} size={34} active={u.id === activeUser?.id} />
+                  <div>
+                    <div style={{ fontSize: 13, color: u.id === activeUser?.id ? "#3ecfb9" : "#c8ddd0", fontWeight: u.id === activeUser?.id ? 500 : 400 }}>{u.name}{u.id === activeUser?.id ? " ✓" : ""}</div>
+                    <div style={{ fontSize: 10.5, color: "#3a6652" }}>Since {fmtDate(u.created)}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 7 }}>
+                  {u.id !== activeUser?.id && (
+                    <button onClick={() => switchUser(u)} style={{ background: "#1a3528", border: "1px solid #2a5040", color: "#3ecfb9", borderRadius: 10, padding: "5px 10px", fontSize: 11, cursor: "pointer" }}>Switch</button>
+                  )}
+                  {users.length > 1 && (
+                    <button onClick={() => deleteUser(u.id)} style={{ background: "#2a0f0f", border: "1px solid #7a2020", color: "#e07070", borderRadius: 10, padding: "5px 10px", fontSize: 11, cursor: "pointer" }}>Delete</button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <div className="lbl">Add User</div>
+            <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <input className="ifield" placeholder="Name" value={newUserName} onChange={e => setNewUserName(e.target.value)} style={{ fontSize: 14 }} />
+              <div>
+                <div style={{ fontSize: 10.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>Avatar</div>
+                <AvatarPicker value={newUserAvatar} onChange={setNewUserAvatar} />
+              </div>
+              <button onClick={createUser} disabled={!newUserName.trim()}
+                style={{ padding: "11px", background: newUserName.trim() ? "#3ecfb9" : "#0c1c17", color: newUserName.trim() ? "#071510" : "#3a6652", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: newUserName.trim() ? "pointer" : "default" }}>
+                Create User
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 20 }}>
           <div className="lbl">Danger Zone</div>
           <div className="card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ fontSize: 12, color: "#4f8c6e", lineHeight: 1.5 }}>Reset all visit data. This cannot be undone.</div>
+            <div style={{ fontSize: 12, color: "#4f8c6e", lineHeight: 1.5 }}>Reset all visit data for {activeUser?.name || "this user"}. This cannot be undone.</div>
             <button onClick={() => { if (window.confirm("Delete all visit history? This cannot be undone.")) { setVisits([]); saveVisits([]); } }}
               style={{ background: "#2a0f0f", border: "1px solid #7a2020", color: "#e07070", borderRadius: 12, padding: 11, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
               Clear All Visit Data
@@ -886,11 +1065,56 @@ export default function App() {
   ];
   const TAB_LABELS = { home: "Home", log: "Log", history: "History", stats: "Stats", info: "Info", settings: "Settings" };
 
+  // ── onboarding (no users yet) ─────────────────────────────────
+  const OnboardScreen = () => (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 28px", textAlign: "center" }}>
+      <Logo />
+      <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#d8ece0", fontWeight: 400, marginTop: 20, marginBottom: 6 }}>Lafayette Reservoir</div>
+      <div style={{ fontSize: 13, color: "#4f8c6e", marginBottom: 36 }}>Create your profile to get started</div>
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 14 }}>
+        <input className="ifield" placeholder="Your name" value={newUserName} onChange={e => setNewUserName(e.target.value)}
+          style={{ textAlign: "center", fontSize: 16 }} />
+        <div>
+          <div style={{ fontSize: 10.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 10 }}>Pick an avatar</div>
+          <AvatarPicker value={newUserAvatar} onChange={setNewUserAvatar} />
+        </div>
+        <button onClick={createUser} disabled={!newUserName.trim()} className="cta" style={{ marginTop: 8, opacity: newUserName.trim() ? 1 : 0.4 }}>
+          Let's go →
+        </button>
+      </div>
+      <div style={{ fontSize: 10, color: "#243d30", marginTop: 24 }}>v0.5</div>
+    </div>
+  );
+
+  // ── user picker overlay ───────────────────────────────────────
+  const UserPickerOverlay = () => (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(6,13,10,.92)", zIndex: 50, display: "flex", flexDirection: "column", padding: "32px 22px 28px" }}>
+      <div style={{ fontFamily: "'Lora', serif", fontSize: 22, color: "#d8ece0", marginBottom: 4 }}>Switch User</div>
+      <div style={{ fontSize: 12, color: "#4f8c6e", marginBottom: 22 }}>Each user has their own data</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+        {users.map(u => (
+          <button key={u.id} onClick={() => switchUser(u)}
+            style={{ display: "flex", alignItems: "center", gap: 14, background: u.id === activeUser?.id ? "#1a3528" : "#152820", border: `1px solid ${u.id === activeUser?.id ? "#3ecfb9" : "#1e3d30"}`, borderRadius: 16, padding: "13px 16px", cursor: "pointer", textAlign: "left" }}>
+            <AvatarCircle avatar={u.avatar} size={44} active={u.id === activeUser?.id} />
+            <div>
+              <div style={{ fontSize: 15, color: u.id === activeUser?.id ? "#3ecfb9" : "#d8ece0", fontWeight: 500 }}>{u.name}{u.id === activeUser?.id ? " ✓" : ""}</div>
+              <div style={{ fontSize: 11, color: "#3a6652" }}>Since {fmtDate(u.created)}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+      <button onClick={() => setShowUserPicker(false)}
+        style={{ padding: 14, background: "transparent", border: "1px solid #1e3d30", color: "#6aad8a", borderRadius: 14, fontSize: 14, cursor: "pointer" }}>
+        Cancel
+      </button>
+    </div>
+  );
+
   return (
     <>
       <style>{CSS}</style>
       <div className="phone-wrap">
-        <div className="phone">
+        <div className="phone" style={{ position: "relative" }}>
           <div className="status">
             <span className="status-time">{timeStr}</span>
             <div className="status-icons">
@@ -899,22 +1123,31 @@ export default function App() {
               <span style={{ color: "#c8ddd0" }}><BatteryIcon /></span>
             </div>
           </div>
-          <div className="screen">
-            {tab === "home"     && HomeScreen()}
-            {tab === "log"      && LogScreen()}
-            {tab === "history"  && HistoryScreen()}
-            {tab === "stats"    && StatsScreen()}
-            {tab === "info"     && InfoScreen()}
-            {tab === "settings" && SettingsScreen()}
-          </div>
-          <div className="tabbar">
-            {TABS.map(t => (
-              <div key={t.id} className="tab" onClick={() => setTab(t.id)}>
-                <span className="tab-ic" style={{ opacity: tab === t.id ? 1 : 0.35 }}>{t.icon}</span>
-                <span className="tab-lb" style={{ color: tab === t.id ? "#3ecfb9" : "#2e6045" }}>{TAB_LABELS[t.id]}</span>
+
+          {!activeUser ? (
+            <div className="screen">{OnboardScreen()}</div>
+          ) : (
+            <>
+              <div className="screen">
+                {tab === "home"     && HomeScreen()}
+                {tab === "log"      && LogScreen()}
+                {tab === "history"  && HistoryScreen()}
+                {tab === "stats"    && StatsScreen()}
+                {tab === "info"     && InfoScreen()}
+                {tab === "settings" && SettingsScreen()}
               </div>
-            ))}
-          </div>
+              <div className="tabbar">
+                {TABS.map(t => (
+                  <div key={t.id} className="tab" onClick={() => setTab(t.id)}>
+                    <span className="tab-ic" style={{ opacity: tab === t.id ? 1 : 0.35 }}>{t.icon}</span>
+                    <span className="tab-lb" style={{ color: tab === t.id ? "#3ecfb9" : "#2e6045" }}>{TAB_LABELS[t.id]}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {showUserPicker && <UserPickerOverlay />}
         </div>
       </div>
     </>
