@@ -8,18 +8,18 @@ const ACT_COLOR = { "Main Trail": "#3ecfb9", "Rim Trail": "#d4a853", "Fishing": 
 const ACT_ICON  = { "Main Trail": "🥾", "Rim Trail": "⛰️", "Fishing": "🎣", "Picnic": "🧺" };
 
 const SEED = [
-  { id: 1, date: "2026-03-30", parkingCost: 0, duration: 90,  activity: "Main Trail", weight: null, distance: 5.0, notes: "First visit with annual pass! Beautiful spring morning." },
-  { id: 2, date: "2026-03-15", parkingCost: 6, duration: 75,  activity: "Rim Trail",  weight: null, distance: 4.7, notes: "Windy but incredible views of the reservoir." },
-  { id: 3, date: "2026-02-28", parkingCost: 6, duration: 45,  activity: "Fishing",    weight: null, distance: 1.2, notes: "Peaceful morning, no bites." },
-  { id: 4, date: "2026-02-14", parkingCost: 6, duration: 120, activity: "Main Trail", weight: null, distance: 5.0, notes: "Valentine's Day walk, perfect weather." },
-  { id: 5, date: "2026-01-20", parkingCost: 6, duration: 60,  activity: "Main Trail", weight: null, distance: 5.0, notes: "New year energy, crisp morning air." },
+  { id: 1, date: "2026-03-30", parkingCost: 0, duration: 90,  activity: "Main Trail", weight: null, notes: "First visit with annual pass! Beautiful spring morning." },
+  { id: 2, date: "2026-03-15", parkingCost: 6, duration: 75,  activity: "Rim Trail",  weight: null, notes: "Windy but incredible views of the reservoir." },
+  { id: 3, date: "2026-02-28", parkingCost: 6, duration: 45,  activity: "Fishing",    weight: null, notes: "Peaceful morning, no bites." },
+  { id: 4, date: "2026-02-14", parkingCost: 6, duration: 120, activity: "Main Trail", weight: null, notes: "Valentine's Day walk, perfect weather." },
+  { id: 5, date: "2026-01-20", parkingCost: 6, duration: 60,  activity: "Main Trail", weight: null, notes: "New year energy, crisp morning air." },
 ];
 
 const today     = () => new Date().toLocaleDateString("en-CA");
 const fmtDur    = (m) => { const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h}h ${r}m` : `${h}h`) : `${r}m`; };
 const fmtDate   = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const fmtMo     = (s) => { const [y, m] = s.split("-"); return new Date(+y, +m - 1).toLocaleDateString("en-US", { month: "short", year: "2-digit" }); };
-const blankForm = () => ({ date: today(), parkingCost: "", duration: "", activity: "Main Trail", weight: "", distance: "", notes: "" });
+const blankForm = () => ({ date: today(), parkingCost: "", duration: "", activity: "Main Trail", weight: "", notes: "" });
 
 const Logo = () => (
   <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
@@ -111,7 +111,7 @@ export default function App() {
   // ── visit actions ─────────────────────────────────────────────
   const addVisit = () => {
     if (!form.date || !form.duration) return;
-    const v = { id: Date.now(), date: form.date, parkingCost: parseFloat(form.parkingCost) || 0, duration: parseInt(form.duration) || 0, activity: form.activity, weight: parseFloat(form.weight) || null, distance: parseFloat(form.distance) || null, notes: form.notes.trim() };
+    const v = { id: Date.now(), date: form.date, parkingCost: parseFloat(form.parkingCost) || 0, duration: parseInt(form.duration) || 0, activity: form.activity, weight: parseFloat(form.weight) || null, notes: form.notes.trim() };
     const updated = [...visits, v].sort((a, b) => b.date.localeCompare(a.date));
     setVisits(updated); saveVisits(updated);
     setLogSuccess(true);
@@ -125,12 +125,12 @@ export default function App() {
 
   const openEdit = (v) => {
     setEditId(v.id);
-    setEditForm({ date: v.date, parkingCost: v.parkingCost ?? "", duration: v.duration ?? "", activity: v.activity, weight: v.weight ?? "", distance: v.distance ?? "", notes: v.notes ?? "" });
+    setEditForm({ date: v.date, parkingCost: v.parkingCost ?? "", duration: v.duration ?? "", activity: v.activity, weight: v.weight ?? "", notes: v.notes ?? "" });
     setDeleteId(null);
   };
 
   const commitEdit = () => {
-    const updated = visits.map(v => v.id !== editId ? v : { ...v, date: editForm.date, parkingCost: parseFloat(editForm.parkingCost) || 0, duration: parseInt(editForm.duration) || 0, activity: editForm.activity, weight: parseFloat(editForm.weight) || null, distance: parseFloat(editForm.distance) || null, notes: editForm.notes.trim() })
+    const updated = visits.map(v => v.id !== editId ? v : { ...v, date: editForm.date, parkingCost: parseFloat(editForm.parkingCost) || 0, duration: parseInt(editForm.duration) || 0, activity: editForm.activity, weight: parseFloat(editForm.weight) || null, notes: editForm.notes.trim() })
       .sort((a, b) => b.date.localeCompare(a.date));
     setVisits(updated); saveVisits(updated); setEditId(null);
   };
@@ -156,12 +156,6 @@ export default function App() {
   const cumData = [{ name: "Start", amount: 0 }];
   let cum = 0;
   sortedAsc.forEach((v, i) => { cum = parseFloat((cum + v.parkingCost).toFixed(2)); cumData.push({ name: `V${i + 1}`, amount: cum, date: fmtDate(v.date) }); });
-
-  const totalMiles   = visits.reduce((s, v) => s + (v.distance || 0), 0);
-
-  const distData = [{ name: "Start", miles: 0 }];
-  let cumMiles = 0;
-  sortedAsc.forEach((v, i) => { cumMiles = parseFloat((cumMiles + (v.distance || 0)).toFixed(2)); distData.push({ name: `V${i + 1}`, miles: cumMiles, date: fmtDate(v.date) }); });
 
   const weightData  = sortedAsc.filter(v => v.weight).map(v => ({ date: fmtDate(v.date), weight: v.weight }));
   const latestW     = weightData.length ? weightData[weightData.length - 1].weight : null;
@@ -192,7 +186,6 @@ export default function App() {
 
   const TipBar    = ({ active, payload, label }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{label}</div><div style={{ color: "#3ecfb9", fontSize: 14, fontWeight: 600 }}>{payload[0].value} visit{payload[0].value !== 1 ? "s" : ""}</div></div>;
   const TipArea   = ({ active, payload }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{payload[0].payload.date}</div><div style={{ color: "#3ecfb9", fontSize: 14, fontWeight: 600 }}>${payload[0].value.toFixed(2)} saved</div></div>;
-  const TipDist   = ({ active, payload }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{payload[0].payload.date}</div><div style={{ color: "#9fd46a", fontSize: 14, fontWeight: 600 }}>{payload[0].value.toFixed(1)} mi total</div></div>;
   const TipWeight = ({ active, payload }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{payload[0].payload.date}</div><div style={{ color: "#7ab8e8", fontSize: 14, fontWeight: 600 }}>{payload[0].value} lbs</div></div>;
 
   // ─────────────────────────────────────────────────────────────
@@ -208,8 +201,8 @@ export default function App() {
         <div style={{ fontSize: 11, color: "#3a6652", marginTop: 6 }}>Annual Pass · Purchased {fmtDate(settings.passDate)}</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 18px", marginBottom: 14 }}>
-        {[{ val: visits.length, lbl: "Visits" }, { val: fmtDur(totalMins), lbl: "Time" }, { val: `$${totalParking.toFixed(0)}`, lbl: "Saved" }, { val: `${totalMiles.toFixed(1)} mi`, lbl: "Miles" }].map(({ val, lbl }) => (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, padding: "0 18px", marginBottom: 14 }}>
+        {[{ val: visits.length, lbl: "Visits" }, { val: fmtDur(totalMins), lbl: "Time" }, { val: `$${totalParking.toFixed(0)}`, lbl: "Saved" }].map(({ val, lbl }) => (
           <div key={lbl} className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
             <div style={{ fontFamily: "'Lora', serif", fontSize: 22, color: "#3ecfb9", fontWeight: 600, marginBottom: 3 }}>{val}</div>
             <div style={{ fontSize: 9.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2 }}>{lbl}</div>
@@ -268,10 +261,6 @@ export default function App() {
           </div>
         </div>
       )}
-
-      <div style={{ textAlign: "center", paddingTop: 8, paddingBottom: 4 }}>
-        <span style={{ fontSize: 10, color: "#243d30", letterSpacing: 1 }}>v0.5</span>
-      </div>
     </div>
   );
 
@@ -299,15 +288,9 @@ export default function App() {
             <input type="number" className="ifield" placeholder="e.g. 6.00" min="0" step="0.01" value={form.parkingCost} onChange={e => setForm({ ...form, parkingCost: e.target.value })} />
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
-          <div>
-            <div className="lbl">Distance (miles) <span style={{ color: "#3a6652", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
-            <input type="number" className="ifield" placeholder="e.g. 5.0" min="0" step="0.1" value={form.distance} onChange={e => setForm({ ...form, distance: e.target.value })} />
-          </div>
-          <div>
-            <div className="lbl">Weight (lbs) <span style={{ color: "#3a6652", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
-            <input type="number" className="ifield" placeholder="e.g. 178.5" min="0" step="0.1" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
-          </div>
+        <div>
+          <div className="lbl">Weight (lbs) <span style={{ color: "#3a6652", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
+          <input type="number" className="ifield" placeholder="e.g. 178.5" min="0" step="0.1" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} />
         </div>
         <div>
           <div className="lbl">Notes</div>
@@ -319,66 +302,10 @@ export default function App() {
     </div>
   );
 
-  const exportCSV = () => {
-    const header = ["Date", "Activity", "Duration (min)", "Parking Saved ($)", "Distance (mi)", "Weight (lbs)", "Notes"];
-    const rows = [...visits].sort((a, b) => a.date.localeCompare(b.date)).map(v => [
-      v.date, v.activity, v.duration ?? "", v.parkingCost ?? "", v.distance ?? "", v.weight ?? "",
-      `"${(v.notes || "").replace(/"/g, '""')}"`,
-    ]);
-    const csv = [header, ...rows].map(r => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "lafayette-visits.csv"; a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportJSON = () => {
-    const payload = { version: "0.5", exported: new Date().toISOString(), visits };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "lafayette-backup.json"; a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importJSON = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const parsed = JSON.parse(ev.target.result);
-        const incoming = parsed.visits ?? parsed;
-        if (!Array.isArray(incoming)) { alert("Invalid backup file."); return; }
-        if (!window.confirm(`Import ${incoming.length} visits? This will replace your current data.`)) return;
-        const updated = incoming.sort((a, b) => b.date.localeCompare(a.date));
-        setVisits(updated); saveVisits(updated);
-      } catch { alert("Could not read file. Make sure it's a valid JSON backup."); }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-
   const HistoryScreen = () => (
     <div style={{ padding: "18px 18px 32px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 3 }}>
-        <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#d8ece0", fontWeight: 400 }}>Visit Log</div>
-      </div>
-      <div style={{ fontSize: 12.5, color: "#4f8c6e", marginBottom: 12 }}>{visits.length} visit{visits.length !== 1 ? "s" : ""} · {fmtDur(totalMins)} total</div>
-
-      {/* export / import toolbar */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-        <button onClick={exportJSON} style={{ flex: 1, background: "#3ecfb9", color: "#071510", border: "none", borderRadius: 12, padding: "10px 6px", fontSize: 12, fontWeight: 600, cursor: "pointer", lineHeight: 1.3, textAlign: "center" }}>
-          ↓ Backup<br/><span style={{ fontSize: 10, fontWeight: 400 }}>JSON</span>
-        </button>
-        <label style={{ flex: 1, background: "#1a3528", border: "1px solid #2a5040", color: "#3ecfb9", borderRadius: 12, padding: "10px 6px", fontSize: 12, fontWeight: 500, cursor: "pointer", lineHeight: 1.3, textAlign: "center", display: "block" }}>
-          ↑ Restore<br/><span style={{ fontSize: 10, fontWeight: 400 }}>JSON</span>
-          <input type="file" accept=".json" onChange={importJSON} style={{ display: "none" }} />
-        </label>
-        <button onClick={exportCSV} disabled={visits.length === 0} style={{ flex: 1, background: "#152820", border: "1px solid #1e3d30", color: "#6aad8a", borderRadius: 12, padding: "10px 6px", fontSize: 12, fontWeight: 500, cursor: visits.length === 0 ? "default" : "pointer", opacity: visits.length === 0 ? 0.4 : 1, lineHeight: 1.3, textAlign: "center" }}>
-          ↓ Export<br/><span style={{ fontSize: 10, fontWeight: 400 }}>CSV</span>
-        </button>
-      </div>
-
+      <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#d8ece0", fontWeight: 400, marginBottom: 3 }}>Visit Log</div>
+      <div style={{ fontSize: 12.5, color: "#4f8c6e", marginBottom: 20 }}>{visits.length} visit{visits.length !== 1 ? "s" : ""} · {fmtDur(totalMins)} total</div>
       {visits.length === 0 && <div style={{ textAlign: "center", color: "#3a6652", padding: "48px 0", fontSize: 13 }}>No visits yet</div>}
       {visits.map(v => (
         <div key={v.id} className="visit-row">
@@ -403,15 +330,9 @@ export default function App() {
                   <input type="number" className="ifield" min="0" step="0.01" value={editForm.parkingCost} onChange={e => setEditForm({ ...editForm, parkingCost: e.target.value })} />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <div className="lbl">Distance (mi)</div>
-                  <input type="number" className="ifield" min="0" step="0.1" placeholder="optional" value={editForm.distance} onChange={e => setEditForm({ ...editForm, distance: e.target.value })} />
-                </div>
-                <div>
-                  <div className="lbl">Weight (lbs)</div>
-                  <input type="number" className="ifield" min="0" step="0.1" placeholder="optional" value={editForm.weight} onChange={e => setEditForm({ ...editForm, weight: e.target.value })} />
-                </div>
+              <div>
+                <div className="lbl">Weight (lbs) <span style={{ color: "#3a6652", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— optional</span></div>
+                <input type="number" className="ifield" min="0" step="0.1" placeholder="optional" value={editForm.weight} onChange={e => setEditForm({ ...editForm, weight: e.target.value })} />
               </div>
               <div>
                 <div className="lbl">Notes</div>
@@ -432,7 +353,6 @@ export default function App() {
                       {ACT_ICON[v.activity]} {v.activity}
                     </span>
                     <span style={{ fontSize: 11.5, color: "#6aad8a" }}>{fmtDur(v.duration)}</span>
-                    {v.distance && <span style={{ fontSize: 11.5, color: "#9fd46a" }}>📍 {v.distance} mi</span>}
                     {v.weight && <span style={{ fontSize: 11.5, color: "#7ab8e8" }}>⚖️ {v.weight} lbs</span>}
                   </div>
                 </div>
@@ -538,42 +458,8 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 22 }}>
-        <div className="lbl">Cumulative distance (miles)</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
-          {[
-            { val: `${totalMiles.toFixed(1)} mi`, lbl: "Total" },
-            { val: visits.filter(v => v.distance).length > 0 ? `${(totalMiles / visits.filter(v => v.distance).length).toFixed(1)} mi` : "—", lbl: "Avg/Visit" },
-            { val: visits.filter(v => v.distance).length > 0 ? `${Math.max(...visits.filter(v => v.distance).map(v => v.distance)).toFixed(1)} mi` : "—", lbl: "Longest" },
-          ].map(({ val, lbl }) => (
-            <div key={lbl} className="card" style={{ textAlign: "center", padding: "12px 8px" }}>
-              <div style={{ fontFamily: "'Lora', serif", fontSize: 16, color: "#9fd46a", fontWeight: 600, marginBottom: 3 }}>{val}</div>
-              <div style={{ fontSize: 9.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2 }}>{lbl}</div>
-            </div>
-          ))}
-        </div>
-        <div className="card" style={{ height: 180, paddingLeft: 4, paddingRight: 6 }}>
-          {distData.length <= 1
-            ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#3a6652", fontSize: 12 }}>No distance data yet</div>
-            : <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={distData} margin={{ top: 12, right: 4, left: -22, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="distGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#9fd46a" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#9fd46a" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} stroke="#1c3529" strokeDasharray="3 3" />
-                  <XAxis dataKey="name" tick={{ fill: "#4f8c6e", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#4f8c6e", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<TipDist />} cursor={{ stroke: "#9fd46a", strokeWidth: 1, strokeDasharray: "3 3" }} />
-                  <Area type="monotone" dataKey="miles" stroke="#9fd46a" strokeWidth={2.5} fill="url(#distGrad)" dot={false} activeDot={{ r: 4, fill: "#9fd46a", stroke: "#0c1c17", strokeWidth: 2 }} />
-                </AreaChart>
-              </ResponsiveContainer>}
-        </div>
-      </div>
-
       <div>
+        <div className="lbl">Weight over time (lbs)</div>
         {weightData.length < 2 ? (
           <div className="card" style={{ textAlign: "center", padding: "28px 16px" }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>⚖️</div>
@@ -678,163 +564,14 @@ export default function App() {
   };
 
   // ─────────────────────────────────────────────────────────────
-  const HOURS = [
-    { month: "January",   hours: "6:30 am – 5:30 pm" },
-    { month: "February",  hours: "6:30 am – 6:00 pm" },
-    { month: "March",     hours: "6:30 am – 7:30 pm" },
-    { month: "April",     hours: "6:00 am – 8:00 pm" },
-    { month: "May",       hours: "6:00 am – 8:30 pm" },
-    { month: "June",      hours: "6:00 am – 9:00 pm" },
-    { month: "July",      hours: "6:00 am – 9:00 pm" },
-    { month: "August",    hours: "6:00 am – 8:30 pm" },
-    { month: "September", hours: "6:30 am – 8:00 pm" },
-    { month: "October",   hours: "6:30 am – 7:00 pm" },
-    { month: "November",  hours: "6:30 am – 5:30 pm" },
-    { month: "December",  hours: "6:30 am – 5:30 pm" },
-  ];
-
-  const currentMonthHours = HOURS[new Date().getMonth()].hours;
-
-  const InfoScreen = () => (
-    <div style={{ padding: "18px 18px 36px" }}>
-      <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#d8ece0", fontWeight: 400, marginBottom: 3 }}>Park Info</div>
-      <div style={{ fontSize: 12.5, color: "#4f8c6e", marginBottom: 18 }}>Lafayette Reservoir Recreation Area</div>
-
-      {/* Map */}
-      <div style={{ marginBottom: 18 }}>
-        <div className="lbl">Map</div>
-        <div style={{ borderRadius: 18, overflow: "hidden", border: "1px solid #1e3d30", height: 220 }}>
-          <iframe
-            title="Lafayette Reservoir Map"
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3151.2!2d-122.1341!3d37.8877!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80857e5b0de1f015%3A0x2f8e1e6d1e2d1234!2sLafayette%20Reservoir%20Recreation%20Area!5e0!3m2!1sen!2sus!4v1680000000000!5m2!1sen!2sus"
-            width="100%"
-            height="220"
-            style={{ border: 0, display: "block" }}
-            allowFullScreen=""
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
-        </div>
-      </div>
-
-      {/* Contact */}
-      <div style={{ marginBottom: 18 }}>
-        <div className="lbl">Contact</div>
-        <div className="card" style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-          {[
-            { icon: "📍", label: "Address", val: "3849 Mt. Diablo Blvd, Lafayette, CA 94549" },
-            { icon: "📞", label: "Phone",   val: "(925) 284-9669" },
-          ].map(({ icon, label, val }) => (
-            <div key={label} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 0", borderBottom: "1px solid #1c3529" }}>
-              <span style={{ fontSize: 15, lineHeight: 1.4 }}>{icon}</span>
-              <div>
-                <div style={{ fontSize: 10.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 2 }}>{label}</div>
-                <div style={{ fontSize: 13, color: "#c8ddd0" }}>{val}</div>
-              </div>
-            </div>
-          ))}
-          <div style={{ padding: "10px 0" }}>
-            <div style={{ fontSize: 10.5, color: "#4f8c6e", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 6 }}>🌐 Website</div>
-            <a href="https://www.ebmud.com/recreation/east-bay/lafayette-reservoir" target="_blank" rel="noreferrer"
-              style={{ fontSize: 12.5, color: "#3ecfb9", wordBreak: "break-all", textDecoration: "none" }}>
-              ebmud.com/recreation/east-bay/lafayette-reservoir
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {/* Today's hours highlight */}
-      <div style={{ marginBottom: 18 }}>
-        <div className="lbl">Today's Hours</div>
-        <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontSize: 13, color: "#4f8c6e", marginBottom: 3 }}>{HOURS[new Date().getMonth()].month}</div>
-            <div style={{ fontFamily: "'Lora', serif", fontSize: 20, color: "#3ecfb9" }}>{currentMonthHours}</div>
-          </div>
-          <div style={{ fontSize: 28 }}>🕐</div>
-        </div>
-      </div>
-
-      {/* Monthly hours */}
-      <div style={{ marginBottom: 18 }}>
-        <div className="lbl">Hours by Month</div>
-        <div className="card" style={{ padding: "6px 18px" }}>
-          {HOURS.map(({ month, hours }, i) => {
-            const isCurrent = i === new Date().getMonth();
-            return (
-              <div key={month} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: i < 11 ? "1px solid #1c3529" : "none", background: isCurrent ? "transparent" : "transparent" }}>
-                <span style={{ fontSize: 13, color: isCurrent ? "#3ecfb9" : "#6aad8a", fontWeight: isCurrent ? 600 : 400 }}>{month}{isCurrent ? " ←" : ""}</span>
-                <span style={{ fontSize: 12.5, color: isCurrent ? "#d8ece0" : "#4f8c6e", fontWeight: isCurrent ? 500 : 400 }}>{hours}</span>
-              </div>
-            );
-          })}
-          <div style={{ fontSize: 10, color: "#3a6652", paddingTop: 8, lineHeight: 1.5 }}>
-            Visitor Center: Sep–Mar 6:30 am–4:00 pm · Apr–Aug 6:30 am–5:00 pm
-          </div>
-        </div>
-      </div>
-
-      {/* Trails */}
-      <div style={{ marginBottom: 18 }}>
-        <div className="lbl">Trails</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[
-            { name: "Lakeside Nature Trail", dist: "2.79 mi", type: "Paved loop", diff: "Easy", icon: "🚶", color: "#3ecfb9", desc: "Circles the reservoir. Open to bicyclists during limited hours. Dogs allowed." },
-            { name: "Rim Trail",             dist: "4.97 mi", type: "Unpaved fire road", diff: "Moderate", icon: "⛰️", color: "#d4a853", desc: "Traverses ridgetops through brushland and oak forests overlooking the reservoir." },
-          ].map(t => (
-            <div key={t.name} className="card" style={{ borderLeft: `3px solid ${t.color}`, borderRadius: "0 18px 18px 0", paddingLeft: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                <div>
-                  <div style={{ fontSize: 14, color: "#d8ece0", fontWeight: 500, marginBottom: 3 }}>{t.icon} {t.name}</div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <span style={{ fontSize: 11, background: t.color + "22", color: t.color, border: `1px solid ${t.color}44`, borderRadius: 20, padding: "2px 8px" }}>{t.dist}</span>
-                    <span style={{ fontSize: 11, background: "#1e3d30", color: "#6aad8a", borderRadius: 20, padding: "2px 8px" }}>{t.diff}</span>
-                  </div>
-                </div>
-              </div>
-              <div style={{ fontSize: 12, color: "#4f8c6e", lineHeight: 1.55 }}>{t.desc}</div>
-              <div style={{ fontSize: 11, color: "#3a6652", marginTop: 6 }}>{t.type}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Rules */}
-      <div>
-        <div className="lbl">Key Rules</div>
-        <div className="card">
-          {[
-            { icon: "🐕", rule: "Dogs must be leashed at all times (6 ft max). No pets in water." },
-            { icon: "🚲", rule: "Bikes on Lakeside Trail only — Sun until noon, Tue & Thu afternoons." },
-            { icon: "🎣", rule: "EBMUD daily fishing permit required. Purchase at Visitor Center." },
-            { icon: "🏊", rule: "No swimming or wading in the reservoir." },
-            { icon: "🔥", rule: "BBQ in designated areas only, charcoal only." },
-            { icon: "🍄", rule: "Do not eat or collect mushrooms — toxic species present." },
-          ].map(({ icon, rule }) => (
-            <div key={rule} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "9px 0", borderBottom: "1px solid #1c3529" }}>
-              <span style={{ fontSize: 15, lineHeight: 1.5, flexShrink: 0 }}>{icon}</span>
-              <span style={{ fontSize: 12.5, color: "#6aad8a", lineHeight: 1.55 }}>{rule}</span>
-            </div>
-          ))}
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", paddingTop: 9 }}>
-            <span style={{ fontSize: 15, lineHeight: 1.5, flexShrink: 0 }}>🦁</span>
-            <span style={{ fontSize: 12.5, color: "#6aad8a", lineHeight: 1.55 }}>Mountain lion habitat. Hike in groups, make noise at dusk and dawn.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ─────────────────────────────────────────────────────────────
   const TABS = [
     { id: "home",     icon: "🏞️" },
     { id: "log",      icon: "✏️" },
     { id: "history",  icon: "📋" },
     { id: "stats",    icon: "📊" },
-    { id: "info",     icon: "ℹ️"  },
     { id: "settings", icon: "⚙️" },
   ];
-  const TAB_LABELS = { home: "Home", log: "Log", history: "History", stats: "Stats", info: "Info", settings: "Settings" };
+  const TAB_LABELS = { home: "Home", log: "Log", history: "History", stats: "Stats", settings: "Settings" };
 
   return (
     <>
@@ -854,7 +591,6 @@ export default function App() {
             {tab === "log"      && LogScreen()}
             {tab === "history"  && HistoryScreen()}
             {tab === "stats"    && StatsScreen()}
-            {tab === "info"     && InfoScreen()}
             {tab === "settings" && SettingsScreen()}
           </div>
           <div className="tabbar">
