@@ -298,6 +298,10 @@ export default function App() {
   let cumMiles = 0;
   sortedAsc.forEach((v, i) => { cumMiles = parseFloat((cumMiles + (v.distance || 0)).toFixed(2)); distData.push({ name: `V${i + 1}`, miles: cumMiles, date: fmtDate(v.date) }); });
 
+  const byMonthMiles = {};
+  visits.forEach(v => { const k = v.date.slice(0, 7); byMonthMiles[k] = parseFloat(((byMonthMiles[k] || 0) + (v.distance || 0)).toFixed(2)); });
+  const milesMonthData = Object.entries(byMonthMiles).sort().map(([k, miles]) => ({ name: fmtMo(k), miles }));
+
   const weightData  = sortedAsc.filter(v => v.weight).map(v => ({ date: fmtDate(v.date), weight: v.weight }));
   const latestW     = weightData.length ? weightData[weightData.length - 1].weight : null;
   const firstW      = weightData.length ? weightData[0].weight : null;
@@ -340,7 +344,7 @@ export default function App() {
     );
   };
   const TipArea   = ({ active, payload }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{payload[0].payload.date}</div><div style={{ color: "#3ecfb9", fontSize: 14, fontWeight: 600 }}>${payload[0].value.toFixed(2)} saved</div></div>;
-  const TipDist   = ({ active, payload }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{payload[0].payload.date}</div><div style={{ color: "#9fd46a", fontSize: 14, fontWeight: 600 }}>{payload[0].value.toFixed(1)} mi total</div></div>;
+  const TipDist   = ({ active, payload, label }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{label}</div><div style={{ color: "#9fd46a", fontSize: 14, fontWeight: 600 }}>{payload[0].value.toFixed(1)} mi</div></div>;
   const TipWeight = ({ active, payload }) => !active || !payload?.length ? null : <div style={{ background: "#152820", border: "1px solid #2a5040", borderRadius: 10, padding: "8px 12px" }}><div style={{ color: "#4f8c6e", fontSize: 11, marginBottom: 3 }}>{payload[0].payload.date}</div><div style={{ color: "#7ab8e8", fontSize: 14, fontWeight: 600 }}>{payload[0].value} lbs</div></div>;
 
   // ─────────────────────────────────────────────────────────────
@@ -348,22 +352,151 @@ export default function App() {
   // ─────────────────────────────────────────────────────────────
 
   const HomeScreen = () => (
-    <div style={{ paddingBottom: 24 }}>
-      <div style={{ padding: "12px 18px 22px", textAlign: "center", position: "relative" }}>
+    <div style={{ paddingBottom: 24, position: "relative" }}>
+
+      {/* scenic background */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 260, overflow: "hidden", zIndex: 0 }}>
+        <svg viewBox="0 0 390 260" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{ width: "100%", height: "100%" }}>
+          {/* sky gradient */}
+          <defs>
+            <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#0a1f1a"/>
+              <stop offset="100%" stopColor="#122b22"/>
+            </linearGradient>
+            <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#0d2e28"/>
+              <stop offset="100%" stopColor="#091c18"/>
+            </linearGradient>
+            <linearGradient id="hillGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1a3d2e"/>
+              <stop offset="100%" stopColor="#0f2820"/>
+            </linearGradient>
+            <linearGradient id="hillGrad2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#153526"/>
+              <stop offset="100%" stopColor="#0c2019"/>
+            </linearGradient>
+            <linearGradient id="fadeOut" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="60%" stopColor="#0c1c17" stopOpacity="0"/>
+              <stop offset="100%" stopColor="#0c1c17" stopOpacity="1"/>
+            </linearGradient>
+            <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#3ecfb9" stopOpacity="0.12"/>
+              <stop offset="100%" stopColor="#3ecfb9" stopOpacity="0"/>
+            </radialGradient>
+          </defs>
+
+          {/* sky */}
+          <rect width="390" height="260" fill="url(#skyGrad)"/>
+
+          {/* moon glow */}
+          <ellipse cx="310" cy="38" rx="55" ry="55" fill="url(#moonGlow)"/>
+          {/* moon */}
+          <circle cx="310" cy="38" r="11" fill="#c8ede7" opacity="0.55"/>
+          <circle cx="316" cy="34" r="9" fill="#0a1f1a"/>
+
+          {/* stars */}
+          {[[42,18],[88,12],[130,22],[175,8],[220,19],[255,11],[340,25],[365,14],[30,30],[155,32],[280,7]].map(([x,y],i)=>(
+            <circle key={i} cx={x} cy={y} r={i%3===0?1.2:0.7} fill="#3ecfb9" opacity={0.25+((i*37)%40)/100}/>
+          ))}
+
+          {/* far hills */}
+          <path d="M0 130 Q40 95 80 108 Q120 80 160 100 Q200 75 240 95 Q280 72 320 90 Q355 78 390 95 L390 160 L0 160Z" fill="url(#hillGrad2)" opacity="0.7"/>
+
+          {/* mid hills */}
+          <path d="M0 148 Q30 118 65 130 Q100 110 140 125 Q175 105 215 120 Q255 108 295 122 Q330 112 370 125 L390 130 L390 175 L0 175Z" fill="url(#hillGrad)"/>
+
+          {/* trees far left */}
+          {[18,32,48,10].map((x,i)=>(
+            <g key={i} transform={`translate(${x},${118-i*3})`} opacity="0.55">
+              <polygon points="0,-22 7,0 -7,0" fill="#0f2e20"/>
+              <polygon points="0,-32 9,0 -9,0" fill="#112a1c" transform="translate(0,8)"/>
+              <rect x="-2" y="0" width="4" height="8" fill="#0a1e14"/>
+            </g>
+          ))}
+
+          {/* trees far right */}
+          {[355,370,345,380].map((x,i)=>(
+            <g key={i} transform={`translate(${x},${115-i*2})`} opacity="0.5">
+              <polygon points="0,-20 6,0 -6,0" fill="#0f2e20"/>
+              <polygon points="0,-30 8,0 -8,0" fill="#112a1c" transform="translate(0,7)"/>
+              <rect x="-2" y="0" width="3" height="7" fill="#0a1e14"/>
+            </g>
+          ))}
+
+          {/* water surface */}
+          <rect x="0" y="158" width="390" height="70" fill="url(#waterGrad)"/>
+
+          {/* water ripples */}
+          <path d="M20 168 Q50 163 80 168 Q110 173 140 168 Q170 163 200 168" stroke="#3ecfb9" strokeWidth="0.8" fill="none" opacity="0.18"/>
+          <path d="M60 178 Q95 173 130 178 Q165 183 200 178 Q235 173 270 178" stroke="#3ecfb9" strokeWidth="0.6" fill="none" opacity="0.13"/>
+          <path d="M10 190 Q55 185 100 190 Q145 195 190 190 Q235 185 280 190 Q325 195 370 190" stroke="#3ecfb9" strokeWidth="0.7" fill="none" opacity="0.10"/>
+          <path d="M100 202 Q140 198 180 202 Q220 206 260 202 Q300 198 340 202" stroke="#3ecfb9" strokeWidth="0.5" fill="none" opacity="0.08"/>
+
+          {/* moon reflection on water */}
+          <ellipse cx="310" cy="175" rx="18" ry="4" fill="#3ecfb9" opacity="0.06"/>
+          <rect x="305" y="162" width="10" height="18" fill="#3ecfb9" opacity="0.04"/>
+
+          {/* foreground trees left */}
+          <g transform="translate(0,145)" opacity="0.92">
+            <g transform="translate(22,0)">
+              <polygon points="0,-42 13,0 -13,0" fill="#0c2418"/>
+              <polygon points="0,-58 16,0 -16,0" fill="#0e2a1c" transform="translate(0,14)"/>
+              <polygon points="0,-38 11,0 -11,0" fill="#0f2e20" transform="translate(0,26)"/>
+              <rect x="-3.5" y="0" width="7" height="18" fill="#081610"/>
+            </g>
+            <g transform="translate(52,8)">
+              <polygon points="0,-34 10,0 -10,0" fill="#0d2619"/>
+              <polygon points="0,-46 13,0 -13,0" fill="#0f2c1e" transform="translate(0,11)"/>
+              <rect x="-2.5" y="0" width="5" height="14" fill="#081610"/>
+            </g>
+            <g transform="translate(6,12)">
+              <polygon points="0,-28 9,0 -9,0" fill="#0c2418"/>
+              <polygon points="0,-38 11,0 -11,0" fill="#0e2a1c" transform="translate(0,9)"/>
+              <rect x="-2" y="0" width="4" height="12" fill="#081610"/>
+            </g>
+          </g>
+
+          {/* foreground trees right */}
+          <g transform="translate(280,138)" opacity="0.88">
+            <g transform="translate(60,0)">
+              <polygon points="0,-48 15,0 -15,0" fill="#0c2418"/>
+              <polygon points="0,-62 18,0 -18,0" fill="#0e2a1c" transform="translate(0,16)"/>
+              <polygon points="0,-42 13,0 -13,0" fill="#0f2e20" transform="translate(0,30)"/>
+              <rect x="-4" y="0" width="8" height="20" fill="#081610"/>
+            </g>
+            <g transform="translate(30,10)">
+              <polygon points="0,-36 11,0 -11,0" fill="#0d2619"/>
+              <polygon points="0,-50 14,0 -14,0" fill="#0f2c1e" transform="translate(0,12)"/>
+              <rect x="-3" y="0" width="6" height="16" fill="#081610"/>
+            </g>
+            <g transform="translate(88,5)">
+              <polygon points="0,-30 9,0 -9,0" fill="#0c2418"/>
+              <polygon points="0,-40 12,0 -12,0" fill="#0e2a1c" transform="translate(0,10)"/>
+              <rect x="-2.5" y="0" width="5" height="13" fill="#081610"/>
+            </g>
+          </g>
+
+          {/* fade to app background at bottom */}
+          <rect width="390" height="260" fill="url(#fadeOut)"/>
+        </svg>
+      </div>
+
+      {/* header content over background */}
+      <div style={{ position: "relative", zIndex: 1, padding: "12px 18px 22px", textAlign: "center" }}>
         {users.length > 1 && (
           <button onClick={() => setShowUserPicker(true)}
-            style={{ position: "absolute", top: 12, right: 18, background: "#152820", border: "1px solid #1e3d30", color: "#6aad8a", borderRadius: 20, padding: "5px 10px 5px 5px", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}>
+            style={{ position: "absolute", top: 12, right: 18, background: "rgba(21,40,32,0.85)", border: "1px solid #1e3d30", color: "#6aad8a", borderRadius: 20, padding: "5px 10px 5px 5px", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}>
             <AvatarCircle avatar={activeUser?.avatar} size={24} />
             <span>{activeUser?.name}</span>
           </button>
         )}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}><Logo /></div>
-        <div style={{ fontSize: 11, color: "#4f8c6e", letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 500, marginBottom: 5 }}>Welcome back, {activeUser?.name || "friend"}</div>
-        <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#d8ece0", fontWeight: 400, lineHeight: 1.25 }}>Lafayette<br />Reservoir</div>
-        <div style={{ fontSize: 11, color: "#3a6652", marginTop: 6 }}>Annual Pass · Purchased {fmtDate(settings.passDate)}</div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, marginTop: 8 }}><Logo /></div>
+        <div style={{ fontSize: 11, color: "#3ecfb9", letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 500, marginBottom: 5, opacity: 0.8 }}>Welcome back, {activeUser?.name || "friend"}</div>
+        <div style={{ fontFamily: "'Lora', serif", fontSize: 26, color: "#e8f4f0", fontWeight: 400, lineHeight: 1.25, textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}>Lafayette<br />Reservoir</div>
+        <div style={{ fontSize: 11, color: "#5a9e7e", marginTop: 6 }}>Annual Pass · Purchased {fmtDate(settings.passDate)}</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 18px", marginBottom: 14 }}>
+      <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 18px", marginBottom: 14 }}>
         {[{ val: visits.length, lbl: "Visits" }, { val: fmtDur(totalMins), lbl: "Time" }, { val: `$${totalParking.toFixed(0)}`, lbl: "Saved" }, { val: `${totalMiles.toFixed(1)} mi`, lbl: "Miles" }].map(({ val, lbl }) => (
           <div key={lbl} className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
             <div style={{ fontFamily: "'Lora', serif", fontSize: 22, color: "#3ecfb9", fontWeight: 600, marginBottom: 3 }}>{val}</div>
@@ -372,7 +505,7 @@ export default function App() {
         ))}
       </div>
 
-      <div className="sec">
+      <div className="sec" style={{ position: "relative", zIndex: 1 }}>
         <div className="card">
           <div className="lbl" style={{ marginBottom: 14 }}>Break-Even Progress</div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
@@ -399,7 +532,7 @@ export default function App() {
       </div>
 
       {visits.length > 0 && (
-        <div className="sec" style={{ paddingBottom: 0 }}>
+        <div className="sec" style={{ paddingBottom: 0, position: "relative", zIndex: 1 }}>
           <div className="lbl">Last Visit</div>
           <div className="card" style={{ display: "flex", gap: 13, alignItems: "center" }}>
             <div style={{ fontSize: 26 }}>{ACT_ICON[visits[0].activity]}</div>
@@ -416,7 +549,7 @@ export default function App() {
       )}
 
       {visits.length === 0 && (
-        <div className="sec">
+        <div className="sec" style={{ position: "relative", zIndex: 1 }}>
           <div className="card" style={{ textAlign: "center", padding: "32px 20px" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🏞️</div>
             <div style={{ color: "#6aad8a", fontSize: 14 }}>No visits logged yet</div>
@@ -424,7 +557,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ textAlign: "center", paddingTop: 8, paddingBottom: 4 }}>
+      <div style={{ textAlign: "center", paddingTop: 8, paddingBottom: 4, position: "relative", zIndex: 1 }}>
         <span style={{ fontSize: 10, color: "#243d30", letterSpacing: 1 }}>v0.5</span>
       </div>
     </div>
@@ -673,34 +806,6 @@ export default function App() {
       </div>
 
       <div style={{ marginBottom: 22 }}>
-        <div className="lbl">Cumulative savings vs. ${PASS_COST} goal</div>
-        <div className="card" style={{ height: 200, paddingLeft: 4, paddingRight: 6 }}>
-          {cumData.length <= 1
-            ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#3a6652", fontSize: 12 }}>No data yet</div>
-            : <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={cumData} margin={{ top: 12, right: 4, left: -22, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="savGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3ecfb9" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#3ecfb9" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} stroke="#1c3529" strokeDasharray="3 3" />
-                  <XAxis dataKey="name" tick={{ fill: "#4f8c6e", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#4f8c6e", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} domain={[0, Math.max(PASS_COST * 1.05, totalParking * 1.15, 30)]} />
-                  <Tooltip content={<TipArea />} cursor={{ stroke: "#3ecfb9", strokeWidth: 1, strokeDasharray: "3 3" }} />
-                  <ReferenceLine y={PASS_COST} stroke="#d4a853" strokeDasharray="5 4" strokeWidth={1.5} label={{ value: `$${PASS_COST}`, position: "insideTopRight", fill: "#d4a853", fontSize: 10, fontFamily: "DM Sans", dy: -6 }} />
-                  <Area type="monotone" dataKey="amount" stroke="#3ecfb9" strokeWidth={2.5} fill="url(#savGrad)" dot={false} activeDot={{ r: 4, fill: "#3ecfb9", stroke: "#0c1c17", strokeWidth: 2 }} />
-                </AreaChart>
-              </ResponsiveContainer>}
-        </div>
-        <div style={{ display: "flex", gap: 18, marginTop: 10, paddingLeft: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 20, height: 2, background: "#3ecfb9", borderRadius: 2 }} /><span style={{ fontSize: 10.5, color: "#4f8c6e" }}>Savings</span></div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 20, borderTop: "2px dashed #d4a853" }} /><span style={{ fontSize: 10.5, color: "#4f8c6e" }}>${PASS_COST} goal</span></div>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 22 }}>
         <div className="lbl">Activity breakdown</div>
         <div className="card">
           {ACTIVITIES.map(a => {
@@ -729,10 +834,10 @@ export default function App() {
       </div>
 
       <div style={{ marginBottom: 22 }}>
-        <div className="lbl">Cumulative distance (miles)</div>
+        <div className="lbl">Miles per month</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
           {[
-            { val: `${totalMiles.toFixed(1)} mi`, lbl: "Total" },
+            { val: visits.filter(v => v.distance).length > 0 ? `${totalMiles.toFixed(1)} mi` : "—", lbl: "Total" },
             { val: visits.filter(v => v.distance).length > 0 ? `${(totalMiles / visits.filter(v => v.distance).length).toFixed(1)} mi` : "—", lbl: "Avg/Visit" },
             { val: visits.filter(v => v.distance).length > 0 ? `${Math.max(...visits.filter(v => v.distance).map(v => v.distance)).toFixed(1)} mi` : "—", lbl: "Longest" },
           ].map(({ val, lbl }) => (
@@ -742,23 +847,17 @@ export default function App() {
             </div>
           ))}
         </div>
-        <div className="card" style={{ height: 180, paddingLeft: 4, paddingRight: 6 }}>
-          {distData.length <= 1
+        <div className="card" style={{ height: 175, paddingLeft: 4, paddingRight: 6 }}>
+          {milesMonthData.length === 0
             ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#3a6652", fontSize: 12 }}>No distance data yet</div>
             : <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={distData} margin={{ top: 12, right: 4, left: -22, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="distGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#9fd46a" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#9fd46a" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
+                <BarChart data={milesMonthData} margin={{ top: 12, right: 4, left: -22, bottom: 0 }}>
                   <CartesianGrid vertical={false} stroke="#1c3529" strokeDasharray="3 3" />
                   <XAxis dataKey="name" tick={{ fill: "#4f8c6e", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: "#4f8c6e", fontSize: 10, fontFamily: "DM Sans" }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<TipDist />} cursor={{ stroke: "#9fd46a", strokeWidth: 1, strokeDasharray: "3 3" }} />
-                  <Area type="monotone" dataKey="miles" stroke="#9fd46a" strokeWidth={2.5} fill="url(#distGrad)" dot={false} activeDot={{ r: 4, fill: "#9fd46a", stroke: "#0c1c17", strokeWidth: 2 }} />
-                </AreaChart>
+                  <Tooltip content={<TipDist />} cursor={{ fill: "rgba(159,212,106,.06)" }} />
+                  <Bar dataKey="miles" fill="#9fd46a" radius={[6, 6, 0, 0]} maxBarSize={44} />
+                </BarChart>
               </ResponsiveContainer>}
         </div>
       </div>
@@ -1082,7 +1181,7 @@ export default function App() {
           Let's go →
         </button>
       </div>
-      <div style={{ fontSize: 10, color: "#243d30", marginTop: 24 }}>v0.5</div>
+      <div style={{ fontSize: 10, color: "#243d30", marginTop: 24 }}>v0.8</div>
     </div>
   );
 
