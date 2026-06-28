@@ -358,12 +358,11 @@ export default function App() {
 
       {/* photo background */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 268, overflow: "hidden", zIndex: 0 }}>
-        <img src={RESERVOIR_IMG} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
+        <img src={RESERVOIR_IMG} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "38% 15%" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(12,28,23,0) 45%, rgba(12,28,23,0.7) 78%, rgba(12,28,23,1) 100%)" }} />
       </div>
 
       {/* header content over background */}
-      <div style={{ position: "relative", zIndex: 1, padding: "12px 18px 22px", textAlign: "center" }}>      {/* header content over background */}
       <div style={{ position: "relative", zIndex: 1, padding: "12px 18px 22px", textAlign: "center" }}>
         {users.length > 1 && (
           <button onClick={() => setShowUserPicker(true)}
