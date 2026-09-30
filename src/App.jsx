@@ -171,6 +171,9 @@ export default function App() {
   // ── storage helpers (namespaced per user) ─────────────────────
   const vKey = (uid) => `lr_visits_v2_${uid}`;
   const sKey = (uid) => `lr_settings_v1_${uid}`;
+  const bKey = (uid) => `lr_backup_date_${uid}`;
+
+  const [lastBackup, setLastBackup] = useState(null);
   const lsGet = (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
@@ -183,6 +186,8 @@ export default function App() {
     const s = lsGet(sKey(uid));
     if (s) { setSettings(s); setSettingsForm(s); }
     else   { setSettings({ passCost: DEFAULT_PASS_COST, passDate: DEFAULT_PASS_DATE }); setSettingsForm({ passCost: DEFAULT_PASS_COST, passDate: DEFAULT_PASS_DATE }); }
+    const b = lsGet(bKey(uid));
+    setLastBackup(b || null);
   };
 
   // ── bootstrap ─────────────────────────────────────────────────
@@ -440,8 +445,30 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ textAlign: "center", paddingTop: 8, paddingBottom: 4, position: "relative", zIndex: 1 }}>
-        <span style={{ fontSize: 10, color: "#243d30", letterSpacing: 1 }}>v0.5</span>
+      {(() => {
+        const daysSince = lastBackup ? Math.floor((Date.now() - new Date(lastBackup)) / 86400000) : null;
+        const isOverdue = daysSince === null || daysSince >= 14;
+        const isWarning = daysSince !== null && daysSince >= 7 && daysSince < 14;
+        if (!isOverdue && !isWarning) return null;
+        return (
+          <div style={{ position: "relative", zIndex: 1, margin: "0 18px 14px" }}>
+            <div style={{ background: isOverdue ? "rgba(180,60,60,0.18)" : "rgba(180,140,40,0.18)", border: `1px solid ${isOverdue ? "rgba(220,80,80,0.4)" : "rgba(210,168,83,0.4)"}`, borderRadius: 14, padding: "11px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: isOverdue ? "#e07070" : "#d4a853", marginBottom: 2 }}>
+                  {daysSince === null ? "⚠️ Never backed up" : `⚠️ Last backup ${daysSince} days ago`}
+                </div>
+                <div style={{ fontSize: 11, color: "#6aad8a", lineHeight: 1.4 }}>History → ↓ Backup JSON to save your data</div>
+              </div>
+              <button onClick={() => setTab("history")} style={{ background: "#3ecfb9", border: "none", borderRadius: 10, padding: "7px 12px", fontSize: 11, fontWeight: 600, color: "#071510", cursor: "pointer", flexShrink: 0 }}>
+                Back up
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      <div style={{ textAlign: "center", paddingTop: 4, paddingBottom: 4, position: "relative", zIndex: 1 }}>
+        <span style={{ fontSize: 10, color: "#243d30", letterSpacing: 1 }}>v0.8</span>
       </div>
     </div>
   );
@@ -517,11 +544,14 @@ export default function App() {
   };
 
   const exportJSON = () => {
-    const payload = { version: "0.5", exported: new Date().toISOString(), visits };
+    const now = new Date().toISOString();
+    const payload = { version: "0.8", exported: now, visits };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "lafayette-backup.json"; a.click();
     URL.revokeObjectURL(url);
+    lsSet(bKey(activeUser?.id), now);
+    setLastBackup(now);
   };
 
   const importJSON = (e) => {
